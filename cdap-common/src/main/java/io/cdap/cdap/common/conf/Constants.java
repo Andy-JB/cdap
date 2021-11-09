@@ -786,6 +786,31 @@ public final class Constants {
     public static final String AUTHORIZATION_METRICS_TAGS_ENABLED = "security.authorization.metrics.tags.enabled";
 
     /**
+     * Default use subscriber config for writer
+     */
+    public static final String USE_SUBSCRIBER_METADATA_KEY = "metrics.use.subscriber.metadata.key";
+
+    /**
+     * Default use sync write with poll freq config for writer
+     */
+    public static final String SYNC_WRITE_WITH_POLL_FREQ = "metrics.sync.write.with.poll.freq";
+
+    /**
+     * Writer specific use subscriber config
+     */
+    public static final String USE_SUBSCRIBER_METADATA_KEY_WRITER = "metrics.use.subscriber.metadata.key.%s";
+
+    /**
+     * Writer specific sync write with poll freq config
+     */
+    public static final String SYNC_WRITE_WITH_POLL_FREQ_WRITER = "metrics.sync.write.with.poll.freq.%s";
+
+    /**
+     * Writer specific poll freq in seconds
+     */
+    public static final String POLL_FREQUENCY_SECONDS_WRITER = "metrics.poll.frequency.seconds.%s";
+
+    /**
      * Metric's dataset related constants.
      */
     public static final class Dataset {

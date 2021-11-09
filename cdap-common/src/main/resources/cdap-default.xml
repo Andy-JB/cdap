@@ -2739,6 +2739,22 @@
     </description>
   </property>
 
+  <property>
+    <name>metrics.use.subscriber.metadata.key</name>
+    <value>false</value>
+    <description>
+      Specify whether the Metrics Writer should use subscriber name in metadata key
+    </description>
+  </property>
+
+  <property>
+    <name>metrics.sync.write.with.poll.freq</name>
+    <value>false</value>
+    <description>
+      Specify whether the Metrics Writer write frequency should match the metrics polling frequency
+    </description>
+  </property>
+
   <!-- Monitor Handler Configuration -->
 
   <property>
