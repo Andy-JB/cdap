@@ -85,6 +85,8 @@ public class RuntimeServiceRoutingTest {
   @ClassRule
   public static final TemporaryFolder TEMP_FOLDER = new TemporaryFolder();
 
+  private static final ProgramRunId PROGRAM_RUN_ID =
+    NamespaceId.DEFAULT.app("app").workflow("workflow").run(RunIds.generate());
   private static final String MOCK_SERVICE = "mock";
 
   private MessagingService messagingService;
@@ -114,6 +116,7 @@ public class RuntimeServiceRoutingTest {
             if (!expected.equals(authHeader)) {
               throw new UnauthenticatedException("Program run " + programRunId + " is not authorized");
             }
+            return RuntimeMonitorTestUtil.getMockRunRecordMeta(PROGRAM_RUN_ID);
           });
         }
 
