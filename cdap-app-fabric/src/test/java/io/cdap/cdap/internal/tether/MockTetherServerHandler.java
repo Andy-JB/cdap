@@ -17,7 +17,6 @@
 package io.cdap.cdap.internal.tether;
 
 import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
 import io.cdap.cdap.common.conf.Constants;
 import io.cdap.http.AbstractHttpHandler;
 import io.cdap.http.HttpResponder;
@@ -26,7 +25,6 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.Assert;
 
-import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
@@ -34,6 +32,7 @@ import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
+import javax.ws.rs.QueryParam;
 
 /**
  * Mock tethering server handler used in unit tests.
@@ -47,16 +46,17 @@ public class MockTetherServerHandler extends AbstractHttpHandler {
   @GET
   @Path("/tethering/controlchannels/{peer}")
   public void getControlChannels(HttpRequest request, HttpResponder responder,
-                                 @PathParam("peer") String peer) {
+                                 @PathParam("peer") String peer,
+                                 @QueryParam("messageId") String messageId) {
     Assert.assertEquals(TetherClientHandlerTest.CLIENT_INSTANCE, peer);
-    Type type = new TypeToken<List<TetherControlMessage>>() { }.getType();
     if (responseStatus != HttpResponseStatus.OK) {
       responder.sendStatus(responseStatus);
       return;
     }
     List<TetherControlMessage> controlMessages = Collections.singletonList(
       new TetherControlMessage(TetherControlMessage.Type.KEEPALIVE));
-    responder.sendJson(responseStatus, GSON.toJson(controlMessages, type));
+    TetherControlResponse response = new TetherControlResponse(messageId, controlMessages);
+    responder.sendJson(responseStatus, GSON.toJson(response, TetherControlResponse.class));
   }
 
   @POST

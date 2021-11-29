@@ -192,10 +192,10 @@ public class TetherStore {
       Collection<Field<?>> key = ImmutableList.of(
         Fields.stringField(StoreDefinition.TetherStore.PEER_NAME_FIELD, peerName));
       Optional<StructuredRow> row = tetherTable.read(key);
-        if (!row.isPresent()) {
-          throw new PeerNotFoundException(peerName);
-        }
-        return TetherStatus.valueOf(row.get().getString(StoreDefinition.TetherStore.TETHER_STATE_FIELD));
+      if (!row.isPresent()) {
+        throw new PeerNotFoundException(peerName);
+      }
+      return TetherStatus.valueOf(row.get().getString(StoreDefinition.TetherStore.TETHER_STATE_FIELD));
     }, PeerNotFoundException.class, IOException.class);
   }
 

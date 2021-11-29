@@ -18,7 +18,6 @@ package io.cdap.cdap.internal.tether;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.google.gson.reflect.TypeToken;
 import io.cdap.cdap.api.dataset.lib.CloseableIterator;
 import io.cdap.cdap.api.messaging.Message;
 import io.cdap.cdap.api.messaging.MessageFetcher;
@@ -26,17 +25,16 @@ import io.cdap.cdap.api.messaging.MessagePublisher;
 import io.cdap.cdap.api.messaging.TopicAlreadyExistsException;
 import io.cdap.cdap.api.messaging.TopicNotFoundException;
 import io.cdap.cdap.common.BadRequestException;
+import io.cdap.cdap.common.ForbiddenException;
 import io.cdap.cdap.common.NotImplementedException;
 import io.cdap.cdap.common.conf.CConfiguration;
 import io.cdap.cdap.common.conf.Constants;
-import io.cdap.cdap.internal.app.store.AppMetadataStore;
 import io.cdap.cdap.messaging.MessagingService;
 import io.cdap.cdap.messaging.TopicMetadata;
 import io.cdap.cdap.messaging.context.MultiThreadMessagingContext;
 import io.cdap.cdap.proto.id.NamespaceId;
 import io.cdap.cdap.proto.id.TopicId;
 import io.cdap.cdap.spi.data.transaction.TransactionRunner;
-import io.cdap.cdap.spi.data.transaction.TransactionRunners;
 import io.cdap.http.AbstractHttpHandler;
 import io.cdap.http.HandlerContext;
 import io.cdap.http.HttpResponder;
@@ -47,14 +45,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.ws.rs.GET;
@@ -70,15 +64,12 @@ import javax.ws.rs.QueryParam;
 public class TetherServerHandler extends AbstractHttpHandler {
   private static final Logger LOG = LoggerFactory.getLogger(TetherServerHandler.class);
   private static final Gson GSON = new GsonBuilder().create();
-  private static final String SUBSCRIBER = "tether.server";
   static final String TETHERING_TOPIC_PREFIX = "tethering_";
   private final CConfiguration cConf;
   private final TetherStore store;
   private final MessagingService messagingService;
   private final MultiThreadMessagingContext messagingContext;
   private final TransactionRunner transactionRunner;
-  // Last processed message id for each topic. There's a separate topic for each peer.
-  private Map<String, String> lastMessageIds;
 
   @Inject
   TetherServerHandler(CConfiguration cConf, TetherStore store, MessagingService messagingService,
@@ -93,7 +84,6 @@ public class TetherServerHandler extends AbstractHttpHandler {
   @Override
   public void init(HandlerContext context) {
     super.init(context);
-    initializeMessageIds();
   }
 
   /**
@@ -101,26 +91,25 @@ public class TetherServerHandler extends AbstractHttpHandler {
    */
   @GET
   @Path("/tethering/controlchannels/{peer}")
-  public void connectControlChannel(HttpRequest request, HttpResponder responder, @PathParam("peer") String peer)
-    throws IOException, NotImplementedException, PeerNotFoundException {
+  public void connectControlChannel(FullHttpRequest request, HttpResponder responder, @PathParam("peer") String peer,
+                                    @QueryParam("messageId") String messageId)
+    throws IOException, NotImplementedException, PeerNotFoundException, ForbiddenException, BadRequestException {
     checkTetherServerEnabled();
-
     store.updatePeerTimestamp(peer);
     TetherStatus tetherStatus = store.getPeer(peer).getTetherStatus();
     if (tetherStatus == TetherStatus.PENDING) {
-      responder.sendStatus(HttpResponseStatus.NOT_FOUND);
-      return;
+      throw new PeerNotFoundException(String.format("Peer %s not found", peer));
     } else if (tetherStatus == TetherStatus.REJECTED) {
       responder.sendStatus(HttpResponseStatus.FORBIDDEN);
-      return;
+      throw new ForbiddenException(String.format("Peer %s is not authorized", peer));
     }
 
     List<TetherControlMessage> commands = new ArrayList<>();
     MessageFetcher fetcher = messagingContext.getMessageFetcher();
     TopicId topic = new TopicId(NamespaceId.SYSTEM.getNamespace(), TETHERING_TOPIC_PREFIX + peer);
-    String lastMessageId = null;
+    String lastMessageId = messageId;
     try (CloseableIterator<Message> iterator =
-           fetcher.fetch(topic.getNamespace(), topic.getTopic(), 1, lastMessageIds.get(topic.getTopic()))) {
+           fetcher.fetch(topic.getNamespace(), topic.getTopic(), 1, messageId)) {
       while (iterator.hasNext()) {
         Message message = iterator.next();
         TetherControlMessage controlMessage = GSON.fromJson(message.getPayloadAsString(StandardCharsets.UTF_8),
@@ -130,22 +119,15 @@ public class TetherServerHandler extends AbstractHttpHandler {
       }
     } catch (TopicNotFoundException e) {
       LOG.warn("Received control connection from peer {} that's not tethered", peer);
-    }
-
-    if (lastMessageId != null) {
-      // Update the last message id for the topic if we read any messages
-      lastMessageIds.put(topic.getTopic(), lastMessageId);
-      String finalLastMessageId = lastMessageId;
-      TransactionRunners.run(transactionRunner, context -> {
-        AppMetadataStore.create(context).persistSubscriberState(topic.getTopic(), SUBSCRIBER, finalLastMessageId);
-      });
+    } catch (IllegalArgumentException e) {
+      throw new BadRequestException(String.format("Invalid message id %s", messageId));
     }
 
     if (commands.isEmpty()) {
       commands.add(new TetherControlMessage(TetherControlMessage.Type.KEEPALIVE));
     }
-    Type type = new TypeToken<List<TetherControlMessage>>() { }.getType();
-    responder.sendJson(HttpResponseStatus.OK, GSON.toJson(commands, type));
+    TetherControlResponse tetherControlResponse = new TetherControlResponse(lastMessageId, commands);
+    responder.sendJson(HttpResponseStatus.OK, GSON.toJson(tetherControlResponse));
   }
 
   /**
@@ -215,27 +197,6 @@ public class TetherServerHandler extends AbstractHttpHandler {
         throw new BadRequestException(String.format("Invalid action: %s", action));
     }
     updateTetherStatus(responder, peer, tetherStatus);
-  }
-
-  private void initializeMessageIds() {
-    lastMessageIds = new HashMap<>();
-    List<String> topics;
-    try {
-      topics = store.getPeers().stream()
-        .filter(p -> p.getTetherStatus() == TetherStatus.ACCEPTED)
-        .map(PeerInfo::getName)
-        .collect(Collectors.toList());
-    } catch (IOException e) {
-      LOG.warn("Failed to get peer information", e);
-      return;
-    }
-
-    for (String topic: topics) {
-      TransactionRunners.run(transactionRunner, context -> {
-        String messageId = AppMetadataStore.create(context).retrieveSubscriberState(topic, SUBSCRIBER);
-        lastMessageIds.put(topic, messageId);
-      });
-    }
   }
 
   private void checkTetherServerEnabled() throws NotImplementedException {

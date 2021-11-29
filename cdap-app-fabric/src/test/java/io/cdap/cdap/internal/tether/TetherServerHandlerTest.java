@@ -253,6 +253,25 @@ public class TetherServerHandlerTest {
     }
   }
 
+  @Test
+  public void testInvalidMessageId() throws IOException {
+    // Create tethering
+    createTether("xyz", NAMESPACES);
+
+    // User accepts tethering
+    acceptTether();
+
+    // control message with invalid message id should return BAD_REQUEST
+    HttpRequest.Builder builder = HttpRequest.builder(HttpMethod.GET,
+                                                      config.resolveURL(
+                                                        "tethering/controlchannels/xyz?messageId=abcd"));
+    HttpResponse response = HttpRequests.execute(builder.build());
+    Assert.assertEquals(HttpResponseStatus.BAD_REQUEST.code(), response.getResponseCode());
+
+    // Delete tethering
+    deleteTether();
+  }
+
   private void expectTetherControlResponse(String peerName, HttpResponseStatus status) throws IOException {
 
     HttpRequest.Builder builder = HttpRequest.builder(HttpMethod.GET,

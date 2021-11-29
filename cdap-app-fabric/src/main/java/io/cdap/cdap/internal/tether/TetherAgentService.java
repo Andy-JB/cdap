@@ -18,23 +18,24 @@ package io.cdap.cdap.internal.tether;
 
 import com.google.common.base.Preconditions;
 import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
 import io.cdap.cdap.common.conf.CConfiguration;
 import io.cdap.cdap.common.conf.Constants;
 import io.cdap.cdap.common.internal.remote.RemoteAuthenticator;
 import io.cdap.cdap.common.service.AbstractRetryableScheduledService;
 import io.cdap.cdap.common.service.RetryStrategies;
+import io.cdap.cdap.internal.app.store.AppMetadataStore;
 import io.cdap.cdap.spi.data.transaction.TransactionRunner;
+import io.cdap.cdap.spi.data.transaction.TransactionRunners;
 import io.cdap.common.http.HttpMethod;
 import io.cdap.common.http.HttpResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.lang.reflect.Type;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -48,17 +49,22 @@ public class TetherAgentService extends AbstractRetryableScheduledService {
   private static final Logger LOG = LoggerFactory.getLogger(TetherAgentService.class);
   private static final Gson GSON = new Gson();
   private static final String CONNECT_CONTROL_CHANNEL = "/v3/tethering/controlchannels/";
+  private static final String SUBSCRIBER = "tether.agent";
+  private static final String TOPIC = "tethering";
 
   private final CConfiguration cConf;
   private final long connectionInterval;
   private final TetherStore store;
   private final String instanceName;
+  private final TransactionRunner transactionRunner;
+  private String lastMessageId;
 
   @Inject
   TetherAgentService(CConfiguration cConf, TransactionRunner transactionRunner) {
     super(RetryStrategies.fixDelay(cConf.getLong(Constants.Tether.CONNECT_INTERVAL), TimeUnit.SECONDS));
     this.connectionInterval = TimeUnit.SECONDS.toMillis(cConf.getLong(Constants.Tether.CONNECT_INTERVAL));
     this.cConf = cConf;
+    this.transactionRunner = transactionRunner;
     this.store = new TetherStore(transactionRunner);
     this.instanceName = cConf.get(Constants.INSTANCE_NAME);
   }
@@ -71,6 +77,9 @@ public class TetherAgentService extends AbstractRetryableScheduledService {
     if (authClass != null) {
       RemoteAuthenticator.setDefaultAuthenticator(authClass.newInstance());
     }
+    TransactionRunners.run(transactionRunner, context -> {
+      lastMessageId = AppMetadataStore.create(context).retrieveSubscriberState(TOPIC, SUBSCRIBER);
+    });
   }
 
   @Override
@@ -89,8 +98,12 @@ public class TetherAgentService extends AbstractRetryableScheduledService {
       try {
         Preconditions.checkArgument(peer.getEndpoint() != null,
                                     "Peer %s doesn't have an endpoint", peer.getName());
+        String uri = CONNECT_CONTROL_CHANNEL + instanceName;
+        if (lastMessageId != null) {
+          uri = uri + "?messageId=" + URLEncoder.encode(lastMessageId, "UTF-8");
+        }
         HttpResponse resp = TetherUtils.sendHttpRequest(HttpMethod.GET, new URI(peer.getEndpoint())
-          .resolve(CONNECT_CONTROL_CHANNEL + instanceName));
+          .resolve(uri));
         switch (resp.getResponseCode()) {
           case HttpURLConnection.HTTP_OK:
             handleResponse(resp, peer);
@@ -153,13 +166,12 @@ public class TetherAgentService extends AbstractRetryableScheduledService {
       // Update last connection timestamp.
       store.updatePeerTimestamp(peerInfo.getName());
     }
-    processTetherControlMessage(resp.getResponseBodyAsString(StandardCharsets.UTF_8), peerInfo);
+    processTetherControlResponse(resp.getResponseBodyAsString(StandardCharsets.UTF_8), peerInfo);
   }
 
-  private void processTetherControlMessage(String message, PeerInfo peerInfo) {
-    Type type = new TypeToken<List<TetherControlMessage>>() { }.getType();
-    List<TetherControlMessage> tetherControlMessages = GSON.fromJson(message, type);
-    for (TetherControlMessage tetherControlMessage : tetherControlMessages) {
+  private void processTetherControlResponse(String message, PeerInfo peerInfo) {
+    TetherControlResponse tetherControlResponse = GSON.fromJson(message, TetherControlResponse.class);
+    for (TetherControlMessage tetherControlMessage : tetherControlResponse.getControlMessages()) {
       switch (tetherControlMessage.getType()) {
         case KEEPALIVE:
           LOG.trace("Got keeplive from {}", peerInfo.getName());
@@ -169,5 +181,10 @@ public class TetherAgentService extends AbstractRetryableScheduledService {
           break;
       }
     }
+
+    lastMessageId = tetherControlResponse.getLastMessageId();
+    TransactionRunners.run(transactionRunner, context -> {
+      AppMetadataStore.create(context).persistSubscriberState(TOPIC, SUBSCRIBER, lastMessageId);
+    });
   }
 }
