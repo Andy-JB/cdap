@@ -360,9 +360,10 @@ public class TetheringClientHandlerTest {
                            project, location, namespaceAllocations, TetheringConnectionStatus.ACTIVE);
   }
 
-  private void waitForTetheringStatus(TetheringStatus tetheringStatus, String instanceName, String endpoint, String project,
-                                      String location, List<NamespaceAllocation> namespaces,
-                                      TetheringConnectionStatus connectionStatus) throws IOException, InterruptedException {
+  private void waitForTetheringStatus(TetheringStatus tetheringStatus, String instanceName, String endpoint,
+                                      String project, String location, List<NamespaceAllocation> namespaces,
+                                      TetheringConnectionStatus connectionStatus)
+    throws IOException, InterruptedException {
     List<PeerStatus> peers = new ArrayList<>();
     for (int retry = 0; retry < 5; ++retry) {
       HttpRequest request = HttpRequest.builder(HttpMethod.GET, clientConfig.resolveURL("tethering/connections"))

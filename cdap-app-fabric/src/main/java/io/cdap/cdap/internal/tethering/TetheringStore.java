@@ -83,7 +83,8 @@ public class TetheringStore {
       Collection<Field<?>> fields = new ArrayList<>();
       fields.add(Fields.stringField(StoreDefinition.TetheringStore.PEER_NAME_FIELD, peerName));
       fields.add(Fields.stringField(StoreDefinition.TetheringStore.TETHERING_STATE_FIELD, tetheringStatus.toString()));
-      fields.add(Fields.longField(StoreDefinition.TetheringStore.LAST_CONNECTION_TIME_FIELD, System.currentTimeMillis()));
+      fields.add(Fields.longField(StoreDefinition.TetheringStore.LAST_CONNECTION_TIME_FIELD,
+                                  System.currentTimeMillis()));
       StructuredTable tetheringTable = context.getTable(StoreDefinition.TetheringStore.TETHERING);
       tetheringTable.update(fields);
     }, IOException.class);
@@ -116,7 +117,8 @@ public class TetheringStore {
     TransactionRunners.run(transactionRunner, context -> {
       Collection<Field<?>> fields = new ArrayList<>();
       fields.add(Fields.stringField(StoreDefinition.TetheringStore.PEER_NAME_FIELD, peerName));
-      fields.add(Fields.longField(StoreDefinition.TetheringStore.LAST_CONNECTION_TIME_FIELD, System.currentTimeMillis()));
+      fields.add(Fields.longField(StoreDefinition.TetheringStore.LAST_CONNECTION_TIME_FIELD,
+                                  System.currentTimeMillis()));
       StructuredTable tetheringTable = context.getTable(StoreDefinition.TetheringStore.TETHERING);
       tetheringTable.update(fields);
     }, IOException.class);
@@ -202,7 +204,8 @@ public class TetheringStore {
   private PeerInfo getPeerInfo(StructuredRow row) {
     String peerName = row.getString(StoreDefinition.TetheringStore.PEER_NAME_FIELD);
     String endpoint = row.getString(StoreDefinition.TetheringStore.PEER_URI_FIELD);
-    TetheringStatus tetheringStatus = TetheringStatus.valueOf(row.getString(StoreDefinition.TetheringStore.TETHERING_STATE_FIELD));
+    TetheringStatus tetheringStatus = TetheringStatus.valueOf(
+      row.getString(StoreDefinition.TetheringStore.TETHERING_STATE_FIELD));
     PeerMetadata peerMetadata = GSON.fromJson(row.getString(StoreDefinition.TetheringStore.PEER_METADATA_FIELD),
                                               PeerMetadata.class);
     long lastConnectionTime = row.getLong(StoreDefinition.TetheringStore.LAST_CONNECTION_TIME_FIELD);
