@@ -14,7 +14,7 @@
  * the License.
  */
 
-package io.cdap.cdap.internal.tether;
+package io.cdap.cdap.internal.tethering;
 
 import java.util.Objects;
 import javax.annotation.Nullable;
@@ -25,19 +25,19 @@ import javax.annotation.Nullable;
 public class PeerInfo {
   private final String name;
   private final String endpoint;
-  private final TetherStatus tetherStatus;
+  private final TetheringStatus tetheringStatus;
   private final PeerMetadata metadata;
   private final long lastConnectionTime;
 
-  public PeerInfo(String name, @Nullable String endpoint, TetherStatus tetherStatus, PeerMetadata metadata) {
-    this(name, endpoint, tetherStatus, metadata, 0);
+  public PeerInfo(String name, @Nullable String endpoint, TetheringStatus tetheringStatus, PeerMetadata metadata) {
+    this(name, endpoint, tetheringStatus, metadata, 0);
   }
 
-  public PeerInfo(String name, @Nullable String endpoint, TetherStatus tetherStatus,
+  public PeerInfo(String name, @Nullable String endpoint, TetheringStatus tetheringStatus,
                   PeerMetadata metadata, long lastConnectionTime) {
     this.name = name;
     this.endpoint = endpoint;
-    this.tetherStatus = tetherStatus;
+    this.tetheringStatus = tetheringStatus;
     this.metadata = metadata;
     this.lastConnectionTime = lastConnectionTime;
   }
@@ -51,8 +51,8 @@ public class PeerInfo {
     return endpoint;
   }
 
-  public TetherStatus getTetherStatus() {
-    return tetherStatus;
+  public TetheringStatus getTetherStatus() {
+    return tetheringStatus;
   }
 
   public PeerMetadata getMetadata() {
@@ -74,13 +74,13 @@ public class PeerInfo {
     PeerInfo that = (PeerInfo) other;
     return Objects.equals(this.name, that.name) &&
       Objects.equals(this.endpoint, that.endpoint) &&
-      Objects.equals(this.tetherStatus, that.tetherStatus) &&
+      Objects.equals(this.tetheringStatus, that.tetheringStatus) &&
       Objects.equals(this.metadata, that.metadata) &&
       Objects.equals(this.lastConnectionTime, that.lastConnectionTime);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(name, endpoint, tetherStatus, metadata, lastConnectionTime);
+    return Objects.hash(name, endpoint, tetheringStatus, metadata, lastConnectionTime);
   }
 }

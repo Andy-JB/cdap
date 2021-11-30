@@ -14,7 +14,7 @@
  * the License.
  */
 
-package io.cdap.cdap.internal.tether;
+package io.cdap.cdap.internal.tethering;
 
 import com.google.gson.Gson;
 import io.cdap.cdap.common.conf.Constants;
@@ -38,35 +38,35 @@ import javax.ws.rs.QueryParam;
  * Mock tethering server handler used in unit tests.
  */
 @Path(Constants.Gateway.API_VERSION_3)
-public class MockTetherServerHandler extends AbstractHttpHandler {
+public class MockTetheringServerHandler extends AbstractHttpHandler {
   private static final Gson GSON = new Gson();
   private HttpResponseStatus responseStatus = HttpResponseStatus.OK;
-  private boolean tetherCreated = false;
+  private boolean tetheringCreated = false;
 
   @GET
   @Path("/tethering/controlchannels/{peer}")
   public void getControlChannels(HttpRequest request, HttpResponder responder,
                                  @PathParam("peer") String peer,
                                  @QueryParam("messageId") String messageId) {
-    Assert.assertEquals(TetherClientHandlerTest.CLIENT_INSTANCE, peer);
+    Assert.assertEquals(TetheringClientHandlerTest.CLIENT_INSTANCE, peer);
     if (responseStatus != HttpResponseStatus.OK) {
       responder.sendStatus(responseStatus);
       return;
     }
-    List<TetherControlMessage> controlMessages = Collections.singletonList(
-      new TetherControlMessage(TetherControlMessage.Type.KEEPALIVE));
-    TetherControlResponse response = new TetherControlResponse(messageId, controlMessages);
-    responder.sendJson(responseStatus, GSON.toJson(response, TetherControlResponse.class));
+    List<TetheringControlMessage> controlMessages = Collections.singletonList(
+      new TetheringControlMessage(TetheringControlMessage.Type.KEEPALIVE));
+    TetheringControlResponse response = new TetheringControlResponse(messageId, controlMessages);
+    responder.sendJson(responseStatus, GSON.toJson(response, TetheringControlResponse.class));
   }
 
   @POST
   @Path("/tethering/connect")
   public void createTether(FullHttpRequest request, HttpResponder responder) {
     String content = request.content().toString(StandardCharsets.UTF_8);
-    TetherConnectionRequest tetherRequest = GSON.fromJson(content, TetherConnectionRequest.class);
-    Assert.assertEquals(TetherClientHandlerTest.CLIENT_INSTANCE, tetherRequest.getPeer());
-    Assert.assertEquals(TetherClientHandlerTest.NAMESPACES, tetherRequest.getNamespaceAllocations());
-    tetherCreated = true;
+    TetheringConnectionRequest tetherRequest = GSON.fromJson(content, TetheringConnectionRequest.class);
+    Assert.assertEquals(TetheringClientHandlerTest.CLIENT_INSTANCE, tetherRequest.getPeer());
+    Assert.assertEquals(TetheringClientHandlerTest.NAMESPACES, tetherRequest.getNamespaceAllocations());
+    tetheringCreated = true;
     responder.sendStatus(HttpResponseStatus.OK);
   }
 
@@ -74,11 +74,11 @@ public class MockTetherServerHandler extends AbstractHttpHandler {
     this.responseStatus = responseStatus;
   }
 
-  public boolean isTetherCreated() {
-    return tetherCreated;
+  public boolean isTetheringCreated() {
+    return tetheringCreated;
   }
 
-  public void setTetherCreated(boolean tetherCreated) {
-    this.tetherCreated = tetherCreated;
+  public void setTetheringCreated(boolean tetheringCreated) {
+    this.tetheringCreated = tetheringCreated;
   }
 }

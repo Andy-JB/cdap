@@ -14,7 +14,7 @@
  * the License.
  */
 
-package io.cdap.cdap.internal.tether;
+package io.cdap.cdap.internal.tethering;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.Service;
@@ -67,12 +67,12 @@ import java.util.Collections;
 import java.util.List;
 import javax.annotation.Nullable;
 
-public class TetherServerHandlerTest {
+public class TetheringServerHandlerTest {
   private static final Gson GSON = new GsonBuilder().create();
   private static final List<NamespaceAllocation> NAMESPACES = ImmutableList.of(
     new NamespaceAllocation("testns1", "1", "2Gi"),
     new NamespaceAllocation("testns2", null, null));
-  private static TetherStore tetherStore;
+  private static TetheringStore tetheringStore;
   private static MessagingService messagingService;
   private static CConfiguration cConf;
   private static Injector injector;
@@ -99,7 +99,7 @@ public class TetherServerHandlerTest {
           expose(MetricsCollectionService.class);
         }
       });
-    tetherStore = new TetherStore(injector.getInstance(TransactionRunner.class));
+    tetheringStore = new TetheringStore(injector.getInstance(TransactionRunner.class));
     messagingService = injector.getInstance(MessagingService.class);
     if (messagingService instanceof Service) {
       ((Service) messagingService).startAndWait();
@@ -123,11 +123,11 @@ public class TetherServerHandlerTest {
     TransactionRunner transactionRunner = injector.getInstance(TransactionRunner.class);
     // Define all StructuredTable before starting any services that need StructuredTable
     StoreDefinition.createAllTables(injector.getInstance(StructuredTableAdmin.class));
-    cConf.setBoolean(Constants.Tether.TETHER_SERVER_ENABLE, true);
-    cConf.setInt(Constants.Tether.CONNECTION_TIMEOUT_SECONDS, 1);
+    cConf.setBoolean(Constants.Tethering.TETHER_SERVER_ENABLE, true);
+    cConf.setInt(Constants.Tethering.CONNECTION_TIMEOUT_SECONDS, 1);
     service = new CommonNettyHttpServiceBuilder(CConfiguration.create(), getClass().getSimpleName())
-      .setHttpHandlers(new TetherServerHandler(cConf, tetherStore, messagingService, transactionRunner),
-                       new TetherHandler(cConf, tetherStore, messagingService))
+      .setHttpHandlers(new TetheringServerHandler(cConf, tetheringStore, messagingService, transactionRunner),
+                       new TetheringHandler(cConf, tetheringStore, messagingService))
       .build();
     service.start();
     config = ClientConfig.builder()
@@ -141,71 +141,71 @@ public class TetherServerHandlerTest {
 
   @Test
   public void testAcceptTether() throws IOException, InterruptedException {
-    // Tether is initiated by peer
-    createTether("xyz", NAMESPACES);
-    // Tether status should be PENDING
-    expectTetherStatus("xyz", TetherStatus.PENDING, NAMESPACES, TetherConnectionStatus.INACTIVE);
+    // Tethering is initiated by peer
+    createTethering("xyz", NAMESPACES);
+    // Tethering status should be PENDING
+    expectTetheringStatus("xyz", TetheringStatus.PENDING, NAMESPACES, TetheringConnectionStatus.INACTIVE);
 
     // Duplicate tether initiation should be ignored
-    createTether("xyz", NAMESPACES);
-    // Tether status should be PENDING
-    expectTetherStatus("xyz", TetherStatus.PENDING, NAMESPACES, TetherConnectionStatus.INACTIVE);
+    createTethering("xyz", NAMESPACES);
+    // Tethering status should be PENDING
+    expectTetheringStatus("xyz", TetheringStatus.PENDING, NAMESPACES, TetheringConnectionStatus.INACTIVE);
 
     // Server should respond with 404 because tether is still pending.
-    expectTetherControlResponse("xyz", HttpResponseStatus.NOT_FOUND);
+    expectTetheringControlResponse("xyz", HttpResponseStatus.NOT_FOUND);
 
     // User accepts tethering
-    acceptTether();
-    expectTetherStatus("xyz", TetherStatus.ACCEPTED, NAMESPACES, TetherConnectionStatus.ACTIVE);
+    acceptTethering();
+    expectTetheringStatus("xyz", TetheringStatus.ACCEPTED, NAMESPACES, TetheringConnectionStatus.ACTIVE);
 
     // Duplicate accept tethering should be ignored
-    acceptTether();
-    expectTetherControlResponse("xyz", HttpResponseStatus.OK);
-    expectTetherStatus("xyz", TetherStatus.ACCEPTED, NAMESPACES, TetherConnectionStatus.ACTIVE);
+    acceptTethering();
+    expectTetheringControlResponse("xyz", HttpResponseStatus.OK);
+    expectTetheringStatus("xyz", TetheringStatus.ACCEPTED, NAMESPACES, TetheringConnectionStatus.ACTIVE);
 
     // Reject tethering should be ignored
-    rejectTether();
-    expectTetherControlResponse("xyz", HttpResponseStatus.OK);
+    rejectTethering();
+    expectTetheringControlResponse("xyz", HttpResponseStatus.OK);
 
-    // Tether initiation should be ignored
-    createTether("xyz", NAMESPACES);
-    expectTetherControlResponse("xyz", HttpResponseStatus.OK);
-    expectTetherStatus("xyz", TetherStatus.ACCEPTED, NAMESPACES, TetherConnectionStatus.ACTIVE);
+    // Tethering initiation should be ignored
+    createTethering("xyz", NAMESPACES);
+    expectTetheringControlResponse("xyz", HttpResponseStatus.OK);
+    expectTetheringStatus("xyz", TetheringStatus.ACCEPTED, NAMESPACES, TetheringConnectionStatus.ACTIVE);
 
     // Wait until we don't receive any control messages from the peer for upto the timeout interval.
-    Thread.sleep(cConf.getInt(Constants.Tether.CONNECTION_TIMEOUT_SECONDS) * 1000);
-    expectTetherStatus("xyz", TetherStatus.ACCEPTED, NAMESPACES, TetherConnectionStatus.INACTIVE);
+    Thread.sleep(cConf.getInt(Constants.Tethering.CONNECTION_TIMEOUT_SECONDS) * 1000);
+    expectTetheringStatus("xyz", TetheringStatus.ACCEPTED, NAMESPACES, TetheringConnectionStatus.INACTIVE);
 
     // Delete tethering
-    deleteTether();
+    deleteTethering();
   }
 
   @Test
   public void testRejectTether() throws IOException, InterruptedException {
-    // Tether is initiated by peer
-    createTether("xyz", NAMESPACES);
-    // Tether status should be PENDING
-    expectTetherStatus("xyz", TetherStatus.PENDING, NAMESPACES, TetherConnectionStatus.INACTIVE);
+    // Tethering is initiated by peer
+    createTethering("xyz", NAMESPACES);
+    // Tethering status should be PENDING
+    expectTetheringStatus("xyz", TetheringStatus.PENDING, NAMESPACES, TetheringConnectionStatus.INACTIVE);
 
     // User rejects tethering
-    rejectTether();
+    rejectTethering();
     // Server should return 403 when tethering is rejected.
-    expectTetherControlResponse("xyz", HttpResponseStatus.FORBIDDEN);
-    expectTetherStatus("xyz", TetherStatus.REJECTED, NAMESPACES, TetherConnectionStatus.ACTIVE);
+    expectTetheringControlResponse("xyz", HttpResponseStatus.FORBIDDEN);
+    expectTetheringStatus("xyz", TetheringStatus.REJECTED, NAMESPACES, TetheringConnectionStatus.ACTIVE);
 
 
     // Duplicate reject tethering should be ignored
-    rejectTether();
-    expectTetherControlResponse("xyz", HttpResponseStatus.FORBIDDEN);
-    expectTetherStatus("xyz", TetherStatus.REJECTED, NAMESPACES, TetherConnectionStatus.ACTIVE);
+    rejectTethering();
+    expectTetheringControlResponse("xyz", HttpResponseStatus.FORBIDDEN);
+    expectTetheringStatus("xyz", TetheringStatus.REJECTED, NAMESPACES, TetheringConnectionStatus.ACTIVE);
 
     // Accept tethering should be ignored
-    acceptTether();
-    expectTetherControlResponse("xyz", HttpResponseStatus.FORBIDDEN);
-    expectTetherStatus("xyz", TetherStatus.REJECTED, NAMESPACES, TetherConnectionStatus.ACTIVE);
+    acceptTethering();
+    expectTetheringControlResponse("xyz", HttpResponseStatus.FORBIDDEN);
+    expectTetheringStatus("xyz", TetheringStatus.REJECTED, NAMESPACES, TetheringConnectionStatus.ACTIVE);
 
     // Delete tethering
-    deleteTether();
+    deleteTethering();
   }
 
   @Test
@@ -219,7 +219,7 @@ public class TetherServerHandlerTest {
   @Test
   public void testInvalidAction() throws IOException {
     // Create tethering
-    createTether("xyz", NAMESPACES);
+    createTethering("xyz", NAMESPACES);
 
     // Perform invalid action, should get BAD_REQUEST error
     HttpRequest request = HttpRequest.builder(HttpMethod.POST,
@@ -228,22 +228,22 @@ public class TetherServerHandlerTest {
     Assert.assertEquals(HttpResponseStatus.BAD_REQUEST.code(), response.getResponseCode());
 
     // Delete tethering
-    deleteTether();
+    deleteTethering();
   }
 
   @Test
-  public void testTetherTopic() throws IOException, TopicNotFoundException {
+  public void testTetheringTopic() throws IOException, TopicNotFoundException {
     // Create tethering
-    createTether("xyz", NAMESPACES);
+    createTethering("xyz", NAMESPACES);
 
     TopicId topic = new TopicId(NamespaceId.SYSTEM.getNamespace(),
-                                TetherServerHandler.TETHERING_TOPIC_PREFIX + "xyz");
+                                TetheringServerHandler.TETHERING_TOPIC_PREFIX + "xyz");
     // Per-peer messaging topic should be created
     TopicMetadata metadata = messagingService.getTopic(topic);
     Assert.assertEquals(topic, metadata.getTopicId());
 
     // Delete tethering
-    deleteTether();
+    deleteTethering();
 
     // Messaging topic should be deleted
     try {
@@ -256,10 +256,10 @@ public class TetherServerHandlerTest {
   @Test
   public void testInvalidMessageId() throws IOException {
     // Create tethering
-    createTether("xyz", NAMESPACES);
+    createTethering("xyz", NAMESPACES);
 
     // User accepts tethering
-    acceptTether();
+    acceptTethering();
 
     // control message with invalid message id should return BAD_REQUEST
     HttpRequest.Builder builder = HttpRequest.builder(HttpMethod.GET,
@@ -269,10 +269,10 @@ public class TetherServerHandlerTest {
     Assert.assertEquals(HttpResponseStatus.BAD_REQUEST.code(), response.getResponseCode());
 
     // Delete tethering
-    deleteTether();
+    deleteTethering();
   }
 
-  private void expectTetherControlResponse(String peerName, HttpResponseStatus status) throws IOException {
+  private void expectTetheringControlResponse(String peerName, HttpResponseStatus status) throws IOException {
 
     HttpRequest.Builder builder = HttpRequest.builder(HttpMethod.GET,
                                                       config.resolveURL("tethering/controlchannels/" + peerName));
@@ -280,37 +280,37 @@ public class TetherServerHandlerTest {
     Assert.assertEquals(status.code(), response.getResponseCode());
   }
 
-  private void createTether(String peerName, List<NamespaceAllocation> namespaces) throws IOException {
-    TetherConnectionRequest tetherRequest = new TetherConnectionRequest(peerName, namespaces);
-    doHttpRequest(HttpMethod.POST, "tethering/connect", GSON.toJson(tetherRequest));
+  private void createTethering(String peerName, List<NamespaceAllocation> namespaces) throws IOException {
+    TetheringConnectionRequest tetheringRequest = new TetheringConnectionRequest(peerName, namespaces);
+    doHttpRequest(HttpMethod.POST, "tethering/connect", GSON.toJson(tetheringRequest));
   }
 
-  private List<PeerStatus> getTetherStatus() throws IOException {
+  private List<PeerStatus> getTetheringStatus() throws IOException {
     Type type = new TypeToken<List<PeerStatus>>() { }.getType();
     String responseBody = doHttpRequest(HttpMethod.GET, "tethering/connections");
     return GSON.fromJson(responseBody, type);
   }
 
-  private void expectTetherStatus(String peerName, TetherStatus tetherStatus,
-                                  List<NamespaceAllocation> namespaces, TetherConnectionStatus connectionStatus)
+  private void expectTetheringStatus(String peerName, TetheringStatus tetheringStatus,
+                                     List<NamespaceAllocation> namespaces, TetheringConnectionStatus connectionStatus)
     throws IOException {
-    List<PeerStatus> peerStatusList = getTetherStatus();
+    List<PeerStatus> peerStatusList = getTetheringStatus();
     Assert.assertEquals(1, peerStatusList.size());
     PeerMetadata expectedPeerMetadata = new PeerMetadata(namespaces, Collections.emptyMap());
-    PeerStatus expectedPeerInfo = new PeerStatus(peerName, null, tetherStatus,
+    PeerStatus expectedPeerInfo = new PeerStatus(peerName, null, tetheringStatus,
                                                  expectedPeerMetadata, connectionStatus);
     Assert.assertEquals(expectedPeerInfo, peerStatusList.get(0));
   }
 
-  private void deleteTether() throws IOException {
+  private void deleteTethering() throws IOException {
     doHttpRequest(HttpMethod.DELETE, "tethering/connections/xyz");
   }
 
-  private void acceptTether() throws IOException {
+  private void acceptTethering() throws IOException {
     doHttpRequest(HttpMethod.POST, "tethering/connections/xyz?action=accept");
   }
 
-  private void rejectTether() throws IOException {
+  private void rejectTethering() throws IOException {
     doHttpRequest(HttpMethod.POST, "tethering/connections/xyz?action=reject");
   }
 

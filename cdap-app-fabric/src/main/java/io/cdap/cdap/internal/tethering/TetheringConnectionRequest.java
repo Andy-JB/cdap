@@ -14,19 +14,19 @@
  * the License.
  */
 
-package io.cdap.cdap.internal.tether;
+package io.cdap.cdap.internal.tethering;
 
 import java.util.List;
 
 /**
- * Tethering request sent from the {@link TetherAgentService} to
+ * Tethering request sent from the {@link TetheringAgentService} to
  * the tethering server.
  */
-public class TetherConnectionRequest {
+public class TetheringConnectionRequest {
   private final String peer;
   private final List<NamespaceAllocation> namespaceAllocations;
 
-  public TetherConnectionRequest(String peer, List<NamespaceAllocation> namespaceAllocations) {
+  public TetheringConnectionRequest(String peer, List<NamespaceAllocation> namespaceAllocations) {
     this.peer = peer;
     this.namespaceAllocations = namespaceAllocations;
   }

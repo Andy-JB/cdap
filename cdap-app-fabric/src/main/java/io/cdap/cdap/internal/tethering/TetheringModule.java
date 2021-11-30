@@ -14,12 +14,19 @@
  * the License.
  */
 
-package io.cdap.cdap.internal.tether;
+package io.cdap.cdap.internal.tethering;
+
+import com.google.inject.AbstractModule;
+import com.google.inject.Scopes;
 
 /**
- * Connectivity status of a tether.
+ * Tethering Guice Modules.
  */
-public enum TetherConnectionStatus {
-  INACTIVE,
-  ACTIVE
+public class TetheringModule extends AbstractModule {
+  @Override
+  public void configure() {
+    bind(TetheringHandler.class).in(Scopes.SINGLETON);
+    bind(TetheringServerHandler.class).in(Scopes.SINGLETON);
+    bind(TetheringClientHandler.class).in(Scopes.SINGLETON);
+  }
 }

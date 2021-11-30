@@ -14,7 +14,7 @@
  * the License.
  */
 
-package io.cdap.cdap.internal.tether;
+package io.cdap.cdap.internal.tethering;
 
 import com.google.common.net.HttpHeaders;
 import io.cdap.cdap.common.internal.remote.RemoteAuthenticator;
@@ -30,11 +30,11 @@ import javax.annotation.Nullable;
 /**
  * Utility functions for tethering.
  */
-public class TetherUtils {
+public class TetheringUtils {
   // Connection timeout = 5 seconds.
   private static final int TIMEOUT_MS = 5000;
 
-  private TetherUtils() {
+  private TetheringUtils() {
   }
 
   public static HttpResponse sendHttpRequest(HttpMethod method, URI endpoint) throws IOException {

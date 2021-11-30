@@ -4660,15 +4660,15 @@
   </property>
 
   <property>
-    <name>tether.connection.interval</name>
+    <name>tethering.connection.interval</name>
     <value>10</value>
     <description>
-      Interval for connecting to the tether server.
+      Interval for connecting to the tethering server.
     </description>
   </property>
 
   <property>
-    <name>tether.server.enabled</name>
+    <name>tethering.server.enabled</name>
     <value>false</value>
     <description>
       Determines if tethering server shouuld be enabled.

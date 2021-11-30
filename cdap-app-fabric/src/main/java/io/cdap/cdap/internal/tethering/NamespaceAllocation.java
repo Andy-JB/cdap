@@ -14,7 +14,7 @@
  * the License.
  */
 
-package io.cdap.cdap.internal.tether;
+package io.cdap.cdap.internal.tethering;
 
 import java.util.Objects;
 import javax.annotation.Nullable;

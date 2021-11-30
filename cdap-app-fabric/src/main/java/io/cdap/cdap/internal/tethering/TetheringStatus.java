@@ -14,12 +14,12 @@
  * the License.
  */
 
-package io.cdap.cdap.internal.tether;
+package io.cdap.cdap.internal.tethering;
 
 /**
  * Status of a tether.
  */
-public enum TetherStatus {
+public enum TetheringStatus {
   PENDING,
   ACCEPTED,
   REJECTED

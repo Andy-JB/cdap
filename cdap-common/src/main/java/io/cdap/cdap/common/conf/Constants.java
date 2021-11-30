@@ -1780,19 +1780,19 @@ public final class Constants {
     public static final String SYSTEM_LOG_START_TIME = "support.bundle.system.log.start.time";
   }
 
-  public static final class Tether {
-    public static final String TETHER_SERVER_ENABLE = "tether.server.enabled";
+  public static final class Tethering {
+    public static final String TETHER_SERVER_ENABLE = "tethering.server.enabled";
     /**
      * Interval for connecting to the server.
      */
-    public static final String CONNECT_INTERVAL = "tether.connect.interval";
+    public static final String CONNECT_INTERVAL = "tethering.connect.interval";
 
     /**
      * Tethering connection timeout.
      */
-    public static final String CONNECTION_TIMEOUT_SECONDS = "tether.connection.timeout.seconds";
+    public static final String CONNECTION_TIMEOUT_SECONDS = "tethering.connection.timeout.seconds";
     public static final int DEFAULT_CONNECTION_TIMEOUT_SECONDS = 60;
 
-    public static final String CLIENT_AUTHENTICATOR_CLASS = "tether.client.authenticator.class";
+    public static final String CLIENT_AUTHENTICATOR_CLASS = "tethering.client.authenticator.class";
   }
 }

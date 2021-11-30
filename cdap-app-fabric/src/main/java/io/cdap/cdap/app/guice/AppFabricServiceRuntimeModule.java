@@ -112,10 +112,10 @@ import io.cdap.cdap.internal.pipeline.SynchronousPipelineFactory;
 import io.cdap.cdap.internal.profile.ProfileService;
 import io.cdap.cdap.internal.provision.ProvisionerModule;
 import io.cdap.cdap.internal.sysapp.SystemAppManagementService;
-import io.cdap.cdap.internal.tether.TetherClientHandler;
-import io.cdap.cdap.internal.tether.TetherHandler;
-import io.cdap.cdap.internal.tether.TetherModule;
-import io.cdap.cdap.internal.tether.TetherServerHandler;
+import io.cdap.cdap.internal.tethering.TetheringClientHandler;
+import io.cdap.cdap.internal.tethering.TetheringHandler;
+import io.cdap.cdap.internal.tethering.TetheringModule;
+import io.cdap.cdap.internal.tethering.TetheringServerHandler;
 import io.cdap.cdap.metadata.LocalPreferencesFetcherInternal;
 import io.cdap.cdap.metadata.PreferencesFetcher;
 import io.cdap.cdap.pipeline.PipelineFactory;
@@ -260,7 +260,7 @@ public final class AppFabricServiceRuntimeModule extends RuntimeModule {
                            new ConfigStoreModule(),
                            new EntityVerifierModule(),
                            new ProvisionerModule(),
-                           new TetherModule(),
+                           new TetheringModule(),
                            BootstrapModules.getFileBasedModule(),
                            new AbstractModule() {
                              @Override
@@ -394,9 +394,9 @@ public final class AppFabricServiceRuntimeModule extends RuntimeModule {
       handlerBinder.addBinding().to(ProvisionerHttpHandler.class);
       handlerBinder.addBinding().to(BootstrapHttpHandler.class);
       handlerBinder.addBinding().to(FileFetcherHttpHandlerInternal.class);
-      handlerBinder.addBinding().to(TetherHandler.class);
-      handlerBinder.addBinding().to(TetherServerHandler.class);
-      handlerBinder.addBinding().to(TetherClientHandler.class);
+      handlerBinder.addBinding().to(TetheringHandler.class);
+      handlerBinder.addBinding().to(TetheringServerHandler.class);
+      handlerBinder.addBinding().to(TetheringClientHandler.class);
 
       for (Class<? extends HttpHandler> handlerClass : handlerClasses) {
         handlerBinder.addBinding().to(handlerClass);

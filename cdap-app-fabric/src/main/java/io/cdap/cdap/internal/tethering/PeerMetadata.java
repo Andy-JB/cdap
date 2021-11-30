@@ -14,38 +14,23 @@
  * the License.
  */
 
-package io.cdap.cdap.internal.tether;
+package io.cdap.cdap.internal.tethering;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
- * Tethering request that's sent to the client.
+ * Metadata about a tethered peer.
  */
-public class TetherCreationRequest {
-  // Name of the peer
-  private final String peer;
-  // Server endpoint
-  private final String endpoint;
-  // CDAP namespaces
+public class PeerMetadata {
   private final List<NamespaceAllocation> namespaceAllocations;
-  // Metadata associated with this tether
+  // metadata associated with the peer. ex: project, region when peer is located
   private final Map<String, String> metadata;
 
-  public TetherCreationRequest(String peer, String endpoint,
-                               List<NamespaceAllocation> namespaceAllocations, Map<String, String> metadata) {
-    this.peer = peer;
-    this.endpoint = endpoint;
+  public PeerMetadata(List<NamespaceAllocation> namespaceAllocations, Map<String, String> metadata) {
     this.namespaceAllocations = namespaceAllocations;
     this.metadata = metadata;
-  }
-
-  public String getPeer() {
-    return peer;
-  }
-
-  public String getEndpoint() {
-    return endpoint;
   }
 
   public List<NamespaceAllocation> getNamespaceAllocations() {
@@ -56,4 +41,21 @@ public class TetherCreationRequest {
     return metadata;
   }
 
+  @Override
+  public boolean equals(Object other) {
+    if (this == other) {
+      return true;
+    }
+    if (other == null || getClass() != other.getClass()) {
+      return false;
+    }
+    PeerMetadata that = (PeerMetadata) other;
+    return Objects.equals(this.namespaceAllocations, that.namespaceAllocations) &&
+      Objects.equals(this.metadata, that.metadata);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(namespaceAllocations, metadata);
+  }
 }

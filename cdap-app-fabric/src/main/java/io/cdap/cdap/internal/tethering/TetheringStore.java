@@ -14,7 +14,7 @@
  * the License.
  */
 
-package io.cdap.cdap.internal.tether;
+package io.cdap.cdap.internal.tethering;
 
 import com.google.common.collect.ImmutableList;
 import com.google.gson.Gson;
@@ -40,13 +40,13 @@ import java.util.Optional;
 /**
  * Store for tethering data.
  */
-public class TetherStore {
+public class TetheringStore {
   private static final Gson GSON = new GsonBuilder().create();
 
   private final TransactionRunner transactionRunner;
 
   @Inject
-  TetherStore(TransactionRunner transactionRunner) {
+  TetheringStore(TransactionRunner transactionRunner) {
     this.transactionRunner = transactionRunner;
   }
 
@@ -58,51 +58,51 @@ public class TetherStore {
    */
   public void addPeer(PeerInfo peerInfo) throws IOException {
     TransactionRunners.run(transactionRunner, context -> {
-      StructuredTable tetherTable = context.getTable(StoreDefinition.TetherStore.TETHER);
+      StructuredTable tetheringTable = context.getTable(StoreDefinition.TetheringStore.TETHERING);
       Collection<Field<?>> fields = new ArrayList<>();
-      fields.add(Fields.stringField(StoreDefinition.TetherStore.PEER_NAME_FIELD, peerInfo.getName()));
-      fields.add(Fields.stringField(StoreDefinition.TetherStore.PEER_URI_FIELD, peerInfo.getEndpoint()));
-      fields.add(Fields.stringField(StoreDefinition.TetherStore.TETHER_STATE_FIELD,
+      fields.add(Fields.stringField(StoreDefinition.TetheringStore.PEER_NAME_FIELD, peerInfo.getName()));
+      fields.add(Fields.stringField(StoreDefinition.TetheringStore.PEER_URI_FIELD, peerInfo.getEndpoint()));
+      fields.add(Fields.stringField(StoreDefinition.TetheringStore.TETHERING_STATE_FIELD,
                                     peerInfo.getTetherStatus().toString()));
-      fields.add(Fields.longField(StoreDefinition.TetherStore.LAST_CONNECTION_TIME_FIELD, 0L));
-      fields.add(Fields.stringField(StoreDefinition.TetherStore.PEER_METADATA_FIELD,
+      fields.add(Fields.longField(StoreDefinition.TetheringStore.LAST_CONNECTION_TIME_FIELD, 0L));
+      fields.add(Fields.stringField(StoreDefinition.TetheringStore.PEER_METADATA_FIELD,
                                     GSON.toJson(peerInfo.getMetadata())));
-      tetherTable.upsert(fields);
+      tetheringTable.upsert(fields);
     }, IOException.class);
   }
 
   /**
-   * Updates tether status and last connection time for a peer.
+   * Updates tethering status and last connection time for a peer.
    *
    * @param peerName name of the peer
-   * @param tetherStatus status of tether with the peer
+   * @param tetheringStatus status of tetherinf with the peer
    * @throws IOException if updating the table fails
    */
-    public void updatePeerStatusAndTimestamp(String peerName, TetherStatus tetherStatus) throws IOException {
+    public void updatePeerStatusAndTimestamp(String peerName, TetheringStatus tetheringStatus) throws IOException {
     TransactionRunners.run(transactionRunner, context -> {
       Collection<Field<?>> fields = new ArrayList<>();
-      fields.add(Fields.stringField(StoreDefinition.TetherStore.PEER_NAME_FIELD, peerName));
-      fields.add(Fields.stringField(StoreDefinition.TetherStore.TETHER_STATE_FIELD, tetherStatus.toString()));
-      fields.add(Fields.longField(StoreDefinition.TetherStore.LAST_CONNECTION_TIME_FIELD, System.currentTimeMillis()));
-      StructuredTable tetherTable = context.getTable(StoreDefinition.TetherStore.TETHER);
-      tetherTable.update(fields);
+      fields.add(Fields.stringField(StoreDefinition.TetheringStore.PEER_NAME_FIELD, peerName));
+      fields.add(Fields.stringField(StoreDefinition.TetheringStore.TETHERING_STATE_FIELD, tetheringStatus.toString()));
+      fields.add(Fields.longField(StoreDefinition.TetheringStore.LAST_CONNECTION_TIME_FIELD, System.currentTimeMillis()));
+      StructuredTable tetheringTable = context.getTable(StoreDefinition.TetheringStore.TETHERING);
+      tetheringTable.update(fields);
     }, IOException.class);
   }
 
   /**
-   * Updates tether status for a peer.
+   * Updates tethering status for a peer.
    *
    * @param peerName name of the peer
-   * @param tetherStatus status of tether with the peer
+   * @param tetheringStatus status of tethering with the peer
    * @throws IOException if updating the table fails
    */
-  public void updatePeerStatus(String peerName, TetherStatus tetherStatus) throws IOException {
+  public void updatePeerStatus(String peerName, TetheringStatus tetheringStatus) throws IOException {
     TransactionRunners.run(transactionRunner, context -> {
       Collection<Field<?>> fields = new ArrayList<>();
-      fields.add(Fields.stringField(StoreDefinition.TetherStore.PEER_NAME_FIELD, peerName));
-      fields.add(Fields.stringField(StoreDefinition.TetherStore.TETHER_STATE_FIELD, tetherStatus.toString()));
-      StructuredTable tetherTable = context.getTable(StoreDefinition.TetherStore.TETHER);
-      tetherTable.update(fields);
+      fields.add(Fields.stringField(StoreDefinition.TetheringStore.PEER_NAME_FIELD, peerName));
+      fields.add(Fields.stringField(StoreDefinition.TetheringStore.TETHERING_STATE_FIELD, tetheringStatus.toString()));
+      StructuredTable tetheringTable = context.getTable(StoreDefinition.TetheringStore.TETHERING);
+      tetheringTable.update(fields);
     }, IOException.class);
   }
 
@@ -115,10 +115,10 @@ public class TetherStore {
   public void updatePeerTimestamp(String peerName) throws IOException {
     TransactionRunners.run(transactionRunner, context -> {
       Collection<Field<?>> fields = new ArrayList<>();
-      fields.add(Fields.stringField(StoreDefinition.TetherStore.PEER_NAME_FIELD, peerName));
-      fields.add(Fields.longField(StoreDefinition.TetherStore.LAST_CONNECTION_TIME_FIELD, System.currentTimeMillis()));
-      StructuredTable tetherTable = context.getTable(StoreDefinition.TetherStore.TETHER);
-      tetherTable.update(fields);
+      fields.add(Fields.stringField(StoreDefinition.TetheringStore.PEER_NAME_FIELD, peerName));
+      fields.add(Fields.longField(StoreDefinition.TetheringStore.LAST_CONNECTION_TIME_FIELD, System.currentTimeMillis()));
+      StructuredTable tetheringTable = context.getTable(StoreDefinition.TetheringStore.TETHERING);
+      tetheringTable.update(fields);
     }, IOException.class);
   }
 
@@ -130,9 +130,9 @@ public class TetherStore {
    */
   public void deletePeer(String peerName) throws IOException {
     TransactionRunners.run(transactionRunner, context -> {
-      StructuredTable capabilityTable = context.getTable(StoreDefinition.TetherStore.TETHER);
+      StructuredTable capabilityTable = context.getTable(StoreDefinition.TetheringStore.TETHERING);
       capabilityTable
-        .delete(Collections.singleton(Fields.stringField(StoreDefinition.TetherStore.PEER_NAME_FIELD, peerName)));
+        .delete(Collections.singleton(Fields.stringField(StoreDefinition.TetheringStore.PEER_NAME_FIELD, peerName)));
     }, IOException.class);
   }
 
@@ -145,9 +145,9 @@ public class TetherStore {
   public List<PeerInfo> getPeers() throws IOException {
     List<PeerInfo> peers = new ArrayList<>();
     return TransactionRunners.run(transactionRunner, context -> {
-      StructuredTable tetherTable = context
-        .getTable(StoreDefinition.TetherStore.TETHER);
-      try (CloseableIterator<StructuredRow> iterator = tetherTable.scan(Range.all(), Integer.MAX_VALUE)) {
+      StructuredTable tetheringTable = context
+        .getTable(StoreDefinition.TetheringStore.TETHERING);
+      try (CloseableIterator<StructuredRow> iterator = tetheringTable.scan(Range.all(), Integer.MAX_VALUE)) {
         iterator.forEachRemaining(row -> {
           peers.add(getPeerInfo(row));
         });
@@ -165,11 +165,11 @@ public class TetherStore {
    */
   public PeerInfo getPeer(String peerName) throws IOException, PeerNotFoundException {
     return TransactionRunners.run(transactionRunner, context -> {
-      StructuredTable tetherTable = context
-        .getTable(StoreDefinition.TetherStore.TETHER);
+      StructuredTable tetheringTable = context
+        .getTable(StoreDefinition.TetheringStore.TETHERING);
       Collection<Field<?>> key = ImmutableList.of(
-        Fields.stringField(StoreDefinition.TetherStore.PEER_NAME_FIELD, peerName));
-      Optional<StructuredRow> row = tetherTable.read(key);
+        Fields.stringField(StoreDefinition.TetheringStore.PEER_NAME_FIELD, peerName));
+      Optional<StructuredRow> row = tetheringTable.read(key);
       if (!row.isPresent()) {
         throw new PeerNotFoundException(peerName);
       }
@@ -178,34 +178,34 @@ public class TetherStore {
   }
 
   /**
-   * Get tether status for a peer
+   * Get tethering status for a peer
    *
    * @param peerName name of the peer
-   * @return tether status
+   * @return tethering status
    * @throws IOException if reading from the database fails
    * @throws PeerNotFoundException if the peer is not found
    */
-  public TetherStatus getTetherStatus(String peerName) throws PeerNotFoundException, IOException {
+  public TetheringStatus getTetherStatus(String peerName) throws PeerNotFoundException, IOException {
     return TransactionRunners.run(transactionRunner, context -> {
-      StructuredTable tetherTable = context
-        .getTable(StoreDefinition.TetherStore.TETHER);
+      StructuredTable tetheringTable = context
+        .getTable(StoreDefinition.TetheringStore.TETHERING);
       Collection<Field<?>> key = ImmutableList.of(
-        Fields.stringField(StoreDefinition.TetherStore.PEER_NAME_FIELD, peerName));
-      Optional<StructuredRow> row = tetherTable.read(key);
+        Fields.stringField(StoreDefinition.TetheringStore.PEER_NAME_FIELD, peerName));
+      Optional<StructuredRow> row = tetheringTable.read(key);
       if (!row.isPresent()) {
         throw new PeerNotFoundException(peerName);
       }
-      return TetherStatus.valueOf(row.get().getString(StoreDefinition.TetherStore.TETHER_STATE_FIELD));
+      return TetheringStatus.valueOf(row.get().getString(StoreDefinition.TetheringStore.TETHERING_STATE_FIELD));
     }, PeerNotFoundException.class, IOException.class);
   }
 
   private PeerInfo getPeerInfo(StructuredRow row) {
-    String peerName = row.getString(StoreDefinition.TetherStore.PEER_NAME_FIELD);
-    String endpoint = row.getString(StoreDefinition.TetherStore.PEER_URI_FIELD);
-    TetherStatus tetherStatus = TetherStatus.valueOf(row.getString(StoreDefinition.TetherStore.TETHER_STATE_FIELD));
-    PeerMetadata peerMetadata = GSON.fromJson(row.getString(StoreDefinition.TetherStore.PEER_METADATA_FIELD),
+    String peerName = row.getString(StoreDefinition.TetheringStore.PEER_NAME_FIELD);
+    String endpoint = row.getString(StoreDefinition.TetheringStore.PEER_URI_FIELD);
+    TetheringStatus tetheringStatus = TetheringStatus.valueOf(row.getString(StoreDefinition.TetheringStore.TETHERING_STATE_FIELD));
+    PeerMetadata peerMetadata = GSON.fromJson(row.getString(StoreDefinition.TetheringStore.PEER_METADATA_FIELD),
                                               PeerMetadata.class);
-    long lastConnectionTime = row.getLong(StoreDefinition.TetherStore.LAST_CONNECTION_TIME_FIELD);
-    return new PeerInfo(peerName, endpoint, tetherStatus, peerMetadata, lastConnectionTime);
+    long lastConnectionTime = row.getLong(StoreDefinition.TetheringStore.LAST_CONNECTION_TIME_FIELD);
+    return new PeerInfo(peerName, endpoint, tetheringStatus, peerMetadata, lastConnectionTime);
   }
 }

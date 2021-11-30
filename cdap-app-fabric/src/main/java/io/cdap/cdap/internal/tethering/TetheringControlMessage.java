@@ -14,14 +14,14 @@
  * the License.
  */
 
-package io.cdap.cdap.internal.tether;
+package io.cdap.cdap.internal.tethering;
 
 import java.util.Objects;
 
 /**
  * Control messages sent from tether server to the client.
  */
-public class TetherControlMessage {
+public class TetheringControlMessage {
   /**
    * Control messages type.
    */
@@ -33,11 +33,11 @@ public class TetherControlMessage {
   private final Type type;
   private final byte[] payload;
 
-  public TetherControlMessage(Type type) {
+  public TetheringControlMessage(Type type) {
     this(type, new byte[0]);
   }
 
-  public TetherControlMessage(Type type, byte[] payload) {
+  public TetheringControlMessage(Type type, byte[] payload) {
     this.type = type;
     this.payload = payload;
   }
@@ -59,7 +59,7 @@ public class TetherControlMessage {
       return false;
     }
 
-    TetherControlMessage that = (TetherControlMessage) o;
+    TetheringControlMessage that = (TetheringControlMessage) o;
     return Objects.equals(type, that.type) &&
       Objects.equals(payload, that.payload);
   }

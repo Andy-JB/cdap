@@ -14,7 +14,7 @@
  * the License.
  */
 
-package io.cdap.cdap.internal.tether;
+package io.cdap.cdap.internal.tethering;
 
 import com.google.gson.Gson;
 import io.cdap.cdap.common.BadRequestException;
@@ -42,17 +42,17 @@ import javax.ws.rs.Path;
  * {@link io.cdap.http.HttpHandler} to manage tethering client v3 REST APIs
  */
 @Path(Constants.Gateway.API_VERSION_3)
-public class TetherClientHandler extends AbstractHttpHandler {
-  private static final Logger LOG = LoggerFactory.getLogger(TetherClientHandler.class);
+public class TetheringClientHandler extends AbstractHttpHandler {
+  private static final Logger LOG = LoggerFactory.getLogger(TetheringClientHandler.class);
   private static final Gson GSON = new Gson();
   static final String CREATE_TETHER = "/v3/tethering/connect";
 
-  private final TetherStore store;
+  private final TetheringStore store;
   private final CConfiguration cConf;
   private final String instanceName;
 
   @Inject
-  TetherClientHandler(CConfiguration cConf, TetherStore store) {
+  TetheringClientHandler(CConfiguration cConf, TetheringStore store) {
     this.store = store;
     this.cConf = cConf;
     this.instanceName = cConf.get(Constants.INSTANCE_NAME);
@@ -61,7 +61,7 @@ public class TetherClientHandler extends AbstractHttpHandler {
   @Override
   public void init(HandlerContext context) {
     super.init(context);
-    Class<? extends RemoteAuthenticator> authClass = cConf.getClass(Constants.Tether.CLIENT_AUTHENTICATOR_CLASS,
+    Class<? extends RemoteAuthenticator> authClass = cConf.getClass(Constants.Tethering.CLIENT_AUTHENTICATOR_CLASS,
                                                                     null,
                                                                     RemoteAuthenticator.class);
     if (authClass != null) {
@@ -78,13 +78,13 @@ public class TetherClientHandler extends AbstractHttpHandler {
    */
   @POST
   @Path("/tethering/create")
-  public void createTether(FullHttpRequest request, HttpResponder responder) throws Exception {
+  public void createTethering(FullHttpRequest request, HttpResponder responder) throws Exception {
     String content = request.content().toString(StandardCharsets.UTF_8);
-    TetherCreationRequest tetherCreationRequest = GSON.fromJson(content, TetherCreationRequest.class);
+    TetheringCreationRequest tetheringCreationRequest = GSON.fromJson(content, TetheringCreationRequest.class);
 
     PeerInfo peer = null;
     try {
-      peer = store.getPeer(tetherCreationRequest.getPeer());
+      peer = store.getPeer(tetheringCreationRequest.getPeer());
     } catch (PeerNotFoundException e) {
       // Do nothing, expected if peer is not already configured.
     }
@@ -95,15 +95,15 @@ public class TetherClientHandler extends AbstractHttpHandler {
       return;
     }
 
-    List<NamespaceAllocation> namespaces = tetherCreationRequest.getNamespaceAllocations();
-    TetherConnectionRequest tetherConnectionRequest = new TetherConnectionRequest(instanceName,
-                                                                                  namespaces);
-    if (tetherCreationRequest.getEndpoint() == null) {
+    List<NamespaceAllocation> namespaces = tetheringCreationRequest.getNamespaceAllocations();
+    TetheringConnectionRequest tetheringConnectionRequest = new TetheringConnectionRequest(instanceName,
+                                                                                           namespaces);
+    if (tetheringCreationRequest.getEndpoint() == null) {
       throw new BadRequestException("Endpoint is null");
     }
-    URI endpoint = new URI(tetherCreationRequest.getEndpoint());
-    HttpResponse response = TetherUtils.sendHttpRequest(HttpMethod.POST, endpoint.resolve(CREATE_TETHER),
-                                                        GSON.toJson(tetherConnectionRequest));
+    URI endpoint = new URI(tetheringCreationRequest.getEndpoint());
+    HttpResponse response = TetheringUtils.sendHttpRequest(HttpMethod.POST, endpoint.resolve(CREATE_TETHER),
+                                                           GSON.toJson(tetheringConnectionRequest));
     if (response.getResponseCode() != 200) {
       LOG.error("Failed to send tether request, body: {}, code: {}",
                 response.getResponseBody(), response.getResponseCode());
@@ -111,9 +111,9 @@ public class TetherClientHandler extends AbstractHttpHandler {
       return;
     }
 
-    PeerMetadata peerMetadata = new PeerMetadata(namespaces, tetherCreationRequest.getMetadata());
-    PeerInfo peerInfo = new PeerInfo(tetherCreationRequest.getPeer(), tetherCreationRequest.getEndpoint(),
-                                     TetherStatus.PENDING, peerMetadata);
+    PeerMetadata peerMetadata = new PeerMetadata(namespaces, tetheringCreationRequest.getMetadata());
+    PeerInfo peerInfo = new PeerInfo(tetheringCreationRequest.getPeer(), tetheringCreationRequest.getEndpoint(),
+                                     TetheringStatus.PENDING, peerMetadata);
     store.addPeer(peerInfo);
     responder.sendStatus(HttpResponseStatus.OK);
   }

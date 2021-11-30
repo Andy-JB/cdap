@@ -13,20 +13,15 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
+package io.cdap.cdap.internal.tethering;
 
-package io.cdap.cdap.internal.tether;
-
-import com.google.inject.AbstractModule;
-import com.google.inject.Scopes;
+import io.cdap.cdap.common.NotFoundException;
 
 /**
- * Tethering Guice Modules.
+ * Thrown when a tether peer is not found.
  */
-public class TetherModule extends AbstractModule {
-  @Override
-  public void configure() {
-    bind(TetherHandler.class).in(Scopes.SINGLETON);
-    bind(TetherServerHandler.class).in(Scopes.SINGLETON);
-    bind(TetherClientHandler.class).in(Scopes.SINGLETON);
+public class PeerNotFoundException extends NotFoundException {
+  public PeerNotFoundException(String peerName) {
+    super(String.format("Peer %s not found", peerName));
   }
 }

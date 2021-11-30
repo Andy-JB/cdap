@@ -13,15 +13,13 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
-package io.cdap.cdap.internal.tether;
 
-import io.cdap.cdap.common.NotFoundException;
+package io.cdap.cdap.internal.tethering;
 
 /**
- * Thrown when a tether peer is not found.
+ * Connectivity status of a tethering.
  */
-public class PeerNotFoundException extends NotFoundException {
-  public PeerNotFoundException(String peerName) {
-    super(String.format("Peer %s not found", peerName));
-  }
+public enum TetheringConnectionStatus {
+  INACTIVE,
+  ACTIVE
 }

@@ -14,7 +14,7 @@
  * the License.
  */
 
-package io.cdap.cdap.internal.tether;
+package io.cdap.cdap.internal.tethering;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -61,19 +61,19 @@ import javax.ws.rs.QueryParam;
  * {@link io.cdap.http.HttpHandler} to manage tethering server v3 REST APIs
  */
 @Path(Constants.Gateway.API_VERSION_3)
-public class TetherServerHandler extends AbstractHttpHandler {
-  private static final Logger LOG = LoggerFactory.getLogger(TetherServerHandler.class);
+public class TetheringServerHandler extends AbstractHttpHandler {
+  private static final Logger LOG = LoggerFactory.getLogger(TetheringServerHandler.class);
   private static final Gson GSON = new GsonBuilder().create();
   static final String TETHERING_TOPIC_PREFIX = "tethering_";
   private final CConfiguration cConf;
-  private final TetherStore store;
+  private final TetheringStore store;
   private final MessagingService messagingService;
   private final MultiThreadMessagingContext messagingContext;
   private final TransactionRunner transactionRunner;
 
   @Inject
-  TetherServerHandler(CConfiguration cConf, TetherStore store, MessagingService messagingService,
-                      TransactionRunner transactionRunner) {
+  TetheringServerHandler(CConfiguration cConf, TetheringStore store, MessagingService messagingService,
+                         TransactionRunner transactionRunner) {
     this.cConf = cConf;
     this.store = store;
     this.messagingService = messagingService;
@@ -94,17 +94,17 @@ public class TetherServerHandler extends AbstractHttpHandler {
   public void connectControlChannel(FullHttpRequest request, HttpResponder responder, @PathParam("peer") String peer,
                                     @QueryParam("messageId") String messageId)
     throws IOException, NotImplementedException, PeerNotFoundException, ForbiddenException, BadRequestException {
-    checkTetherServerEnabled();
+    checkTetheringServerEnabled();
     store.updatePeerTimestamp(peer);
-    TetherStatus tetherStatus = store.getPeer(peer).getTetherStatus();
-    if (tetherStatus == TetherStatus.PENDING) {
+    TetheringStatus tetheringStatus = store.getPeer(peer).getTetherStatus();
+    if (tetheringStatus == TetheringStatus.PENDING) {
       throw new PeerNotFoundException(String.format("Peer %s not found", peer));
-    } else if (tetherStatus == TetherStatus.REJECTED) {
+    } else if (tetheringStatus == TetheringStatus.REJECTED) {
       responder.sendStatus(HttpResponseStatus.FORBIDDEN);
       throw new ForbiddenException(String.format("Peer %s is not authorized", peer));
     }
 
-    List<TetherControlMessage> commands = new ArrayList<>();
+    List<TetheringControlMessage> commands = new ArrayList<>();
     MessageFetcher fetcher = messagingContext.getMessageFetcher();
     TopicId topic = new TopicId(NamespaceId.SYSTEM.getNamespace(), TETHERING_TOPIC_PREFIX + peer);
     String lastMessageId = messageId;
@@ -112,8 +112,8 @@ public class TetherServerHandler extends AbstractHttpHandler {
            fetcher.fetch(topic.getNamespace(), topic.getTopic(), 1, messageId)) {
       while (iterator.hasNext()) {
         Message message = iterator.next();
-        TetherControlMessage controlMessage = GSON.fromJson(message.getPayloadAsString(StandardCharsets.UTF_8),
-                                                            TetherControlMessage.class);
+        TetheringControlMessage controlMessage = GSON.fromJson(message.getPayloadAsString(StandardCharsets.UTF_8),
+                                                               TetheringControlMessage.class);
         commands.add(controlMessage);
         lastMessageId = message.getId();
       }
@@ -124,23 +124,23 @@ public class TetherServerHandler extends AbstractHttpHandler {
     }
 
     if (commands.isEmpty()) {
-      commands.add(new TetherControlMessage(TetherControlMessage.Type.KEEPALIVE));
+      commands.add(new TetheringControlMessage(TetheringControlMessage.Type.KEEPALIVE));
     }
-    TetherControlResponse tetherControlResponse = new TetherControlResponse(lastMessageId, commands);
-    responder.sendJson(HttpResponseStatus.OK, GSON.toJson(tetherControlResponse));
+    TetheringControlResponse tetheringControlResponse = new TetheringControlResponse(lastMessageId, commands);
+    responder.sendJson(HttpResponseStatus.OK, GSON.toJson(tetheringControlResponse));
   }
 
   /**
-   * Creates a tether with a client.
+   * Creates a tethering with a client.
    */
   @POST
   @Path("/tethering/connect")
-  public void createTether(FullHttpRequest request, HttpResponder responder)
+  public void createTethering(FullHttpRequest request, HttpResponder responder)
     throws NotImplementedException, IOException {
-    checkTetherServerEnabled();
+    checkTetheringServerEnabled();
 
     String content = request.content().toString(StandardCharsets.UTF_8);
-    TetherConnectionRequest tetherRequest = GSON.fromJson(content, TetherConnectionRequest.class);
+    TetheringConnectionRequest tetherRequest = GSON.fromJson(content, TetheringConnectionRequest.class);
     TopicId topicId = new TopicId(NamespaceId.SYSTEM.getNamespace(),
                                   TETHERING_TOPIC_PREFIX + tetherRequest.getPeer());
     try {
@@ -163,7 +163,7 @@ public class TetherServerHandler extends AbstractHttpHandler {
     // We don't need to keep track of the client metadata on the server side.
     PeerMetadata peerMetadata = new PeerMetadata(tetherRequest.getNamespaceAllocations(), Collections.emptyMap());
     // We don't store the peer endpoint on the server side because the connection is initiated by the client.
-    PeerInfo peerInfo = new PeerInfo(tetherRequest.getPeer(), null, TetherStatus.PENDING, peerMetadata);
+    PeerInfo peerInfo = new PeerInfo(tetherRequest.getPeer(), null, TetheringStatus.PENDING, peerMetadata);
     try {
       store.addPeer(peerInfo);
     } catch (Exception e) {
@@ -172,7 +172,7 @@ public class TetherServerHandler extends AbstractHttpHandler {
       } catch (Exception ex) {
         e.addSuppressed(ex);
       }
-      throw new IOException("Failed to create tether with peer " + tetherRequest.getPeer(), e);
+      throw new IOException("Failed to create tethering with peer " + tetherRequest.getPeer(), e);
     }
     responder.sendStatus(HttpResponseStatus.OK);
   }
@@ -185,31 +185,31 @@ public class TetherServerHandler extends AbstractHttpHandler {
   public void tetherAction(HttpRequest request, HttpResponder responder, @PathParam("peer") String peer,
                            @QueryParam("action") String action)
     throws NotImplementedException, BadRequestException, PeerNotFoundException, IOException {
-    TetherStatus tetherStatus;
+    TetheringStatus tetheringStatus;
     switch (action) {
       case "accept":
-        tetherStatus = TetherStatus.ACCEPTED;
+        tetheringStatus = TetheringStatus.ACCEPTED;
         break;
       case "reject":
-        tetherStatus = TetherStatus.REJECTED;
+        tetheringStatus = TetheringStatus.REJECTED;
         break;
       default:
         throw new BadRequestException(String.format("Invalid action: %s", action));
     }
-    updateTetherStatus(responder, peer, tetherStatus);
+    updateTetherStatus(responder, peer, tetheringStatus);
   }
 
-  private void checkTetherServerEnabled() throws NotImplementedException {
-    if (!cConf.getBoolean(Constants.Tether.TETHER_SERVER_ENABLE)) {
+  private void checkTetheringServerEnabled() throws NotImplementedException {
+    if (!cConf.getBoolean(Constants.Tethering.TETHER_SERVER_ENABLE)) {
       throw new NotImplementedException("Tethering is not enabled");
     }
   }
 
-  private void updateTetherStatus(HttpResponder responder, String peer, TetherStatus newStatus)
+  private void updateTetherStatus(HttpResponder responder, String peer, TetheringStatus newStatus)
     throws NotImplementedException, PeerNotFoundException, IOException {
-    checkTetherServerEnabled();
+    checkTetheringServerEnabled();
     PeerInfo peerInfo = store.getPeer(peer);
-    if (peerInfo.getTetherStatus() == TetherStatus.PENDING) {
+    if (peerInfo.getTetherStatus() == TetheringStatus.PENDING) {
       store.updatePeerStatus(peerInfo.getName(), newStatus);
     } else {
       LOG.info("Cannot update tether state to {} as current state state is {}",
@@ -220,7 +220,7 @@ public class TetherServerHandler extends AbstractHttpHandler {
 
   // Currently unused.
   // TODO: Send RUN_PIPELINE message to peer.
-  private void publishMessage(TopicId topicId, @Nullable TetherControlMessage message)
+  private void publishMessage(TopicId topicId, @Nullable TetheringControlMessage message)
     throws IOException, TopicNotFoundException {
     MessagePublisher publisher = messagingContext.getMessagePublisher();
     try {

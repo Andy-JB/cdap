@@ -14,7 +14,7 @@
  * the License.
  */
 
-package io.cdap.cdap.internal.tether;
+package io.cdap.cdap.internal.tethering;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -45,19 +45,19 @@ import javax.ws.rs.PathParam;
  * {@link io.cdap.http.HttpHandler} to manage tethering v3 REST APIs that are common to client and server.
  */
 @Path(Constants.Gateway.API_VERSION_3)
-public class TetherHandler extends AbstractHttpHandler {
-  private static final Logger LOG = LoggerFactory.getLogger(TetherHandler.class);
+public class TetheringHandler extends AbstractHttpHandler {
+  private static final Logger LOG = LoggerFactory.getLogger(TetheringHandler.class);
   private static final Gson GSON = new GsonBuilder().create();
 
   private final CConfiguration cConf;
-  private final TetherStore store;
+  private final TetheringStore store;
   private final MessagingService messagingService;
 
   // Connection timeout in seconds.
   private int connectionTimeout;
 
   @Inject
-  TetherHandler(CConfiguration cConf, TetherStore store, MessagingService messagingService) {
+  TetheringHandler(CConfiguration cConf, TetheringStore store, MessagingService messagingService) {
     this.cConf = cConf;
     this.store = store;
     this.messagingService = messagingService;
@@ -66,8 +66,8 @@ public class TetherHandler extends AbstractHttpHandler {
   @Override
   public void init(HandlerContext context) {
     super.init(context);
-    connectionTimeout = cConf.getInt(Constants.Tether.CONNECTION_TIMEOUT_SECONDS,
-                                     Constants.Tether.DEFAULT_CONNECTION_TIMEOUT_SECONDS);
+    connectionTimeout = cConf.getInt(Constants.Tethering.CONNECTION_TIMEOUT_SECONDS,
+                                     Constants.Tethering.DEFAULT_CONNECTION_TIMEOUT_SECONDS);
   }
 
   /**
@@ -104,9 +104,9 @@ public class TetherHandler extends AbstractHttpHandler {
     store.getPeer(peer);
     store.deletePeer(peer);
     // Remove per-peer tethering topic if we're running on the server
-    if (cConf.getBoolean(Constants.Tether.TETHER_SERVER_ENABLE)) {
+    if (cConf.getBoolean(Constants.Tethering.TETHER_SERVER_ENABLE)) {
       TopicId topic = new TopicId(NamespaceId.SYSTEM.getNamespace(),
-                                  TetherServerHandler.TETHERING_TOPIC_PREFIX + peer);
+                                  TetheringServerHandler.TETHERING_TOPIC_PREFIX + peer);
       try {
         messagingService.deleteTopic(topic);
       } catch (TopicNotFoundException e) {
@@ -117,9 +117,9 @@ public class TetherHandler extends AbstractHttpHandler {
   }
 
   private PeerStatus getPeerStatus(PeerInfo peerInfo) {
-    TetherConnectionStatus connectionStatus = TetherConnectionStatus.INACTIVE;
+    TetheringConnectionStatus connectionStatus = TetheringConnectionStatus.INACTIVE;
     if (System.currentTimeMillis() - peerInfo.getLastConnectionTime() < connectionTimeout * 1000L) {
-      connectionStatus = TetherConnectionStatus.ACTIVE;
+      connectionStatus = TetheringConnectionStatus.ACTIVE;
     }
     return new PeerStatus(peerInfo.getName(), peerInfo.getEndpoint(), peerInfo.getTetherStatus(),
                           peerInfo.getMetadata(), connectionStatus);

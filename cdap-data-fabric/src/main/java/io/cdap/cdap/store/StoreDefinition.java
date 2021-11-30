@@ -68,7 +68,7 @@ public final class StoreDefinition {
     FieldLineageStore.create(tableAdmin);
     LogFileMetaStore.create(tableAdmin);
     CapabilitiesStore.create(tableAdmin);
-    TetherStore.create(tableAdmin);
+    TetheringStore.create(tableAdmin);
   }
 
   /**
@@ -1015,28 +1015,28 @@ public final class StoreDefinition {
   /**
    * Schema for tethering
    */
-  public static final class TetherStore {
-    public static final StructuredTableId TETHER = new StructuredTableId("tether");
+  public static final class TetheringStore {
+    public static final StructuredTableId TETHERING = new StructuredTableId("tethering");
 
     public static final String PEER_NAME_FIELD = "name";
     public static final String PEER_URI_FIELD = "uri";
-    public static final String TETHER_STATE_FIELD = "state";
+    public static final String TETHERING_STATE_FIELD = "state";
     public static final String LAST_CONNECTION_TIME_FIELD = "last_connection_time";
     public static final String PEER_METADATA_FIELD = "metadata";
 
-    public static final StructuredTableSpecification TETHER_TABLE_SPEC =
+    public static final StructuredTableSpecification TETHERING_TABLE_SPEC =
       new StructuredTableSpecification.Builder()
-        .withId(TETHER)
+        .withId(TETHERING)
         .withFields(Fields.stringType(PEER_NAME_FIELD),
                     Fields.stringType(PEER_URI_FIELD),
-                    Fields.stringType(TETHER_STATE_FIELD),
+                    Fields.stringType(TETHERING_STATE_FIELD),
                     Fields.longType(LAST_CONNECTION_TIME_FIELD),
                     Fields.stringType(PEER_METADATA_FIELD))
         .withPrimaryKeys(PEER_NAME_FIELD)
         .build();
 
     public static void create(StructuredTableAdmin tableAdmin) throws IOException {
-      createIfNotExists(tableAdmin, TETHER_TABLE_SPEC);
+      createIfNotExists(tableAdmin, TETHERING_TABLE_SPEC);
     }
   }
 }

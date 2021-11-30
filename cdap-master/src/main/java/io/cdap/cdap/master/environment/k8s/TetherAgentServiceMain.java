@@ -32,7 +32,7 @@ import io.cdap.cdap.common.logging.LoggingContext;
 import io.cdap.cdap.common.logging.ServiceLoggingContext;
 import io.cdap.cdap.data.runtime.StorageModule;
 import io.cdap.cdap.data.runtime.SystemDatasetRuntimeModule;
-import io.cdap.cdap.internal.tether.TetherAgentService;
+import io.cdap.cdap.internal.tethering.TetheringAgentService;
 import io.cdap.cdap.master.spi.environment.MasterEnvironment;
 import io.cdap.cdap.master.spi.environment.MasterEnvironmentContext;
 import io.cdap.cdap.metrics.collect.LocalMetricsCollectionService;
@@ -69,8 +69,8 @@ public class TetherAgentServiceMain extends AbstractServiceMain<EnvironmentOptio
         protected void configure() {
           bind(MetricsCollectionService.class).to(LocalMetricsCollectionService.class).in(Scopes.SINGLETON);
           expose(MetricsCollectionService.class);
-          bind(TetherAgentService.class).in(Scopes.SINGLETON);
-          expose(TetherAgentService.class);
+          bind(TetheringAgentService.class).in(Scopes.SINGLETON);
+          expose(TetheringAgentService.class);
         }
       });
   }
@@ -84,7 +84,7 @@ public class TetherAgentServiceMain extends AbstractServiceMain<EnvironmentOptio
     if (zkBinding != null) {
       services.add(zkBinding.getProvider().get());
     }
-    services.add(injector.getInstance(TetherAgentService.class));
+    services.add(injector.getInstance(TetheringAgentService.class));
   }
 
   @Nullable

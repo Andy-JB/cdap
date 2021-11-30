@@ -14,7 +14,7 @@
  * the License.
  */
 
-package io.cdap.cdap.internal.tether;
+package io.cdap.cdap.internal.tethering;
 
 import java.util.List;
 import javax.annotation.Nullable;
@@ -22,14 +22,14 @@ import javax.annotation.Nullable;
 /**
  * Heartbeat response sent to tether agent.
  */
-public class TetherControlResponse {
+public class TetheringControlResponse {
   // id of the last control message sent by the server.
   @Nullable
   private String lastMessageId;
   // control messages send by server.
-  private List<TetherControlMessage> controlMessages;
+  private List<TetheringControlMessage> controlMessages;
 
-  public TetherControlResponse(@Nullable String lastMessageId, List<TetherControlMessage> controlMessages) {
+  public TetheringControlResponse(@Nullable String lastMessageId, List<TetheringControlMessage> controlMessages) {
     this.lastMessageId = lastMessageId;
     this.controlMessages = controlMessages;
   }
@@ -38,7 +38,7 @@ public class TetherControlResponse {
     return lastMessageId;
   }
 
-  public List<TetherControlMessage> getControlMessages() {
+  public List<TetheringControlMessage> getControlMessages() {
     return controlMessages;
   }
 }
