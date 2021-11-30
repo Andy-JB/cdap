@@ -166,7 +166,7 @@ public class TetheringClientHandlerTest {
   }
 
   @Test
-  public void testResendTetherRequests() throws InterruptedException, IOException {
+  public void testResendTetheringRequests() throws InterruptedException, IOException {
     Map<String, String> metadata = ImmutableMap.of("project", PROJECT,
                                                    "location", LOCATION);
     PeerMetadata peerMetadata = new PeerMetadata(NAMESPACES, metadata);
@@ -179,16 +179,16 @@ public class TetheringClientHandlerTest {
     // Add peer in PENDING state
     tetheringStore.addPeer(peer);
 
-    // Remote agent should send a tether request to peer in PENDING state if it
+    // Remote agent should send a tethering request to peer in PENDING state if it
     // responds with 404.
-    waitForTetherCreated();
+    waitForTetheringCreated();
 
     // cleanup
     tetheringStore.deletePeer(SERVER_INSTANCE);
   }
 
   @Test
-  public void testTetherAccept() throws Exception {
+  public void testTetheringAccept() throws Exception {
     // Server returns 404 before tethering has been accepted by admin on server side.
     serverHandler.setResponseStatus(HttpResponseStatus.NOT_FOUND);
 
@@ -200,59 +200,59 @@ public class TetheringClientHandlerTest {
 
     String serverEndpoint = serverConfig.getConnectionConfig().getURI().toString();
     // Tethering state should transition to accepted on the client.
-    waitForTetherStatus(TetheringStatus.ACCEPTED, SERVER_INSTANCE, serverEndpoint,
-                        PROJECT, LOCATION, NAMESPACES, TetheringConnectionStatus.ACTIVE);
+    waitForTetheringStatus(TetheringStatus.ACCEPTED, SERVER_INSTANCE, serverEndpoint,
+                           PROJECT, LOCATION, NAMESPACES, TetheringConnectionStatus.ACTIVE);
 
-    // Duplicate tether request should be ignored when tether is accepted.
+    // Duplicate tethering request should be ignored when tether is accepted.
     createTethering(SERVER_INSTANCE, PROJECT, LOCATION, NAMESPACES, TetheringStatus.ACCEPTED);
 
     // Tethering rejection should be ignored when tether is accepted.
     serverHandler.setResponseStatus(HttpResponseStatus.FORBIDDEN);
-    waitForTetherStatus(TetheringStatus.ACCEPTED, SERVER_INSTANCE, serverEndpoint,
-                        PROJECT, LOCATION, NAMESPACES, TetheringConnectionStatus.ACTIVE);
+    waitForTetheringStatus(TetheringStatus.ACCEPTED, SERVER_INSTANCE, serverEndpoint,
+                           PROJECT, LOCATION, NAMESPACES, TetheringConnectionStatus.ACTIVE);
 
     // Make server respond with 500 error for control messages.
     serverHandler.setResponseStatus(HttpResponseStatus.INTERNAL_SERVER_ERROR);
     Thread.sleep(cConf.getInt(Constants.Tethering.CONNECTION_TIMEOUT_SECONDS) * 1000);
     // Control channel state should become inactive
-    waitForTetherStatus(TetheringStatus.ACCEPTED, SERVER_INSTANCE, serverEndpoint,
-                        PROJECT, LOCATION, NAMESPACES, TetheringConnectionStatus.INACTIVE);
+    waitForTetheringStatus(TetheringStatus.ACCEPTED, SERVER_INSTANCE, serverEndpoint,
+                           PROJECT, LOCATION, NAMESPACES, TetheringConnectionStatus.INACTIVE);
     // Stop returning an error from the server.
     serverHandler.setResponseStatus(HttpResponseStatus.OK);
     // Control channel should become active
-    waitForTetherStatus(TetheringStatus.ACCEPTED, SERVER_INSTANCE, serverEndpoint,
-                        PROJECT, LOCATION, NAMESPACES, TetheringConnectionStatus.ACTIVE);
+    waitForTetheringStatus(TetheringStatus.ACCEPTED, SERVER_INSTANCE, serverEndpoint,
+                           PROJECT, LOCATION, NAMESPACES, TetheringConnectionStatus.ACTIVE);
 
     // cleanup
     deleteTethering(SERVER_INSTANCE);
   }
 
   @Test
-  public void testTetherReject() throws Exception {
+  public void testTetheringReject() throws Exception {
     // Server returns 404 before tethering has been accepted or rejected by admin on server side.
     serverHandler.setResponseStatus(HttpResponseStatus.NOT_FOUND);
 
     // Client initiate tethering with the server
     createTethering(SERVER_INSTANCE, PROJECT, LOCATION, NAMESPACES);
 
-    // Duplicate tether request should be ignored when tether is pending
+    // Duplicate tethering request should be ignored when tether is pending
     createTethering(SERVER_INSTANCE, PROJECT, LOCATION, NAMESPACES);
 
     String serverEndpoint = serverConfig.getConnectionConfig().getURI().toString();
     // Control channel should be active at this point.
-    waitForTetherStatus(TetheringStatus.PENDING, SERVER_INSTANCE, serverEndpoint,
-                        PROJECT, LOCATION, NAMESPACES, TetheringConnectionStatus.ACTIVE);
+    waitForTetheringStatus(TetheringStatus.PENDING, SERVER_INSTANCE, serverEndpoint,
+                           PROJECT, LOCATION, NAMESPACES, TetheringConnectionStatus.ACTIVE);
 
     // Server rejects tethering
     serverHandler.setResponseStatus(HttpResponseStatus.FORBIDDEN);
     // Tethering state should be updated to rejected
-    waitForTetherStatus(TetheringStatus.REJECTED, SERVER_INSTANCE, serverEndpoint,
-                        PROJECT, LOCATION, NAMESPACES, TetheringConnectionStatus.ACTIVE);
+    waitForTetheringStatus(TetheringStatus.REJECTED, SERVER_INSTANCE, serverEndpoint,
+                           PROJECT, LOCATION, NAMESPACES, TetheringConnectionStatus.ACTIVE);
 
     // Server sends unexpected 200. It should be ignored.
     serverHandler.setResponseStatus(HttpResponseStatus.OK);
-    waitForTetherStatus(TetheringStatus.REJECTED, SERVER_INSTANCE, serverEndpoint,
-                        PROJECT, LOCATION, NAMESPACES, TetheringConnectionStatus.ACTIVE);
+    waitForTetheringStatus(TetheringStatus.REJECTED, SERVER_INSTANCE, serverEndpoint,
+                           PROJECT, LOCATION, NAMESPACES, TetheringConnectionStatus.ACTIVE);
 
     // Tethering request should be ignored when tether is rejected
     createTethering(SERVER_INSTANCE, PROJECT, LOCATION, NAMESPACES, TetheringStatus.REJECTED);
@@ -308,7 +308,7 @@ public class TetheringClientHandlerTest {
   }
 
   @Test
-  public void testGetTetherUnknownPeer() throws IOException {
+  public void testGetTetheringUnknownPeer() throws IOException {
     HttpRequest request = HttpRequest.builder(HttpMethod.GET,
                                               clientConfig.resolveURL("tethering/connections/unknonwn_peer"))
       .build();
@@ -317,7 +317,7 @@ public class TetheringClientHandlerTest {
   }
 
   @Test
-  public void testDeleteTetherUnknownPeer() throws IOException {
+  public void testDeleteTetheringUnknownPeer() throws IOException {
     HttpRequest request = HttpRequest.builder(HttpMethod.DELETE,
                                               clientConfig.resolveURL("tethering/connections/unknonwn_peer"))
       .build();
@@ -356,13 +356,13 @@ public class TetheringClientHandlerTest {
     HttpResponse response = HttpRequests.execute(request);
     Assert.assertEquals(HttpResponseStatus.OK.code(), response.getResponseCode());
 
-    waitForTetherStatus(expectedTetheringStatus, tetheringRequest.getPeer(), tetheringRequest.getEndpoint(),
-                        project, location, namespaceAllocations, TetheringConnectionStatus.ACTIVE);
+    waitForTetheringStatus(expectedTetheringStatus, tetheringRequest.getPeer(), tetheringRequest.getEndpoint(),
+                           project, location, namespaceAllocations, TetheringConnectionStatus.ACTIVE);
   }
 
-  private void waitForTetherStatus(TetheringStatus tetheringStatus, String instanceName, String endpoint, String project,
-                                   String location, List<NamespaceAllocation> namespaces,
-                                   TetheringConnectionStatus connectionStatus) throws IOException, InterruptedException {
+  private void waitForTetheringStatus(TetheringStatus tetheringStatus, String instanceName, String endpoint, String project,
+                                      String location, List<NamespaceAllocation> namespaces,
+                                      TetheringConnectionStatus connectionStatus) throws IOException, InterruptedException {
     List<PeerStatus> peers = new ArrayList<>();
     for (int retry = 0; retry < 5; ++retry) {
       HttpRequest request = HttpRequest.builder(HttpMethod.GET, clientConfig.resolveURL("tethering/connections"))
@@ -389,7 +389,7 @@ public class TetheringClientHandlerTest {
     Assert.assertEquals(connectionStatus, peer.getConnectionStatus());
   }
 
-  private void waitForTetherCreated() throws InterruptedException {
+  private void waitForTetheringCreated() throws InterruptedException {
     for (int retry = 0; retry < 5; ++retry) {
       if (serverHandler.isTetheringCreated()) {
         return;
