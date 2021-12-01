@@ -374,7 +374,8 @@ public class TetheringClientHandlerTest {
       }.getType();
       peers = GSON.fromJson(response.getResponseBodyAsString(), type);
       Assert.assertEquals(1, peers.size());
-      if (peers.get(0).getTetheringStatus() == tetheringStatus && peers.get(0).getConnectionStatus() == connectionStatus) {
+      if (peers.get(0).getTetheringStatus() == tetheringStatus
+        && peers.get(0).getConnectionStatus() == connectionStatus) {
         break;
       }
       Thread.sleep(500);
