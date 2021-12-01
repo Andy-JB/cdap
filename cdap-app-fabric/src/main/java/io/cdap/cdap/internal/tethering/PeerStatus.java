@@ -47,7 +47,7 @@ public class PeerStatus {
     return endpoint;
   }
 
-  public TetheringStatus getTetherStatus() {
+  public TetheringStatus getTetheringStatus() {
     return tetheringStatus;
   }
 

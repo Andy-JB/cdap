@@ -37,7 +37,9 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import javax.inject.Inject;
@@ -50,14 +52,13 @@ public class TetheringAgentService extends AbstractRetryableScheduledService {
   private static final Gson GSON = new Gson();
   private static final String CONNECT_CONTROL_CHANNEL = "/v3/tethering/controlchannels/";
   private static final String SUBSCRIBER = "tether.agent";
-  private static final String TOPIC = "tethering";
 
   private final CConfiguration cConf;
   private final long connectionInterval;
   private final TetheringStore store;
   private final String instanceName;
   private final TransactionRunner transactionRunner;
-  private String lastMessageId;
+  private Map<String, String> lastMessageIds;
 
   @Inject
   TetheringAgentService(CConfiguration cConf, TransactionRunner transactionRunner) {
@@ -77,9 +78,7 @@ public class TetheringAgentService extends AbstractRetryableScheduledService {
     if (authClass != null) {
       RemoteAuthenticator.setDefaultAuthenticator(authClass.newInstance());
     }
-    TransactionRunners.run(transactionRunner, context -> {
-      lastMessageId = AppMetadataStore.create(context).retrieveSubscriberState(TOPIC, SUBSCRIBER);
-    });
+    initializeMessageIds();
   }
 
   @Override
@@ -88,7 +87,7 @@ public class TetheringAgentService extends AbstractRetryableScheduledService {
     try {
       peers = store.getPeers().stream()
         // Ignore peers in REJECTED state.
-        .filter(p -> p.getTetherStatus() != TetheringStatus.REJECTED)
+        .filter(p -> p.getTetheringStatus() != TetheringStatus.REJECTED)
         .collect(Collectors.toList());
     } catch (IOException e) {
       LOG.warn("Failed to get peer information", e);
@@ -99,7 +98,8 @@ public class TetheringAgentService extends AbstractRetryableScheduledService {
         Preconditions.checkArgument(peer.getEndpoint() != null,
                                     "Peer %s doesn't have an endpoint", peer.getName());
         String uri = CONNECT_CONTROL_CHANNEL + instanceName;
-        if (lastMessageId != null) {
+        String lastMessageId = lastMessageIds.get(peer);
+        if (lastMessageId !=  null) {
           uri = uri + "?messageId=" + URLEncoder.encode(lastMessageId, "UTF-8");
         }
         HttpResponse resp = TetheringUtils.sendHttpRequest(HttpMethod.GET, new URI(peer.getEndpoint())
@@ -148,10 +148,31 @@ public class TetheringAgentService extends AbstractRetryableScheduledService {
     }
   }
 
+  private void initializeMessageIds() {
+    lastMessageIds = new HashMap<>();
+    List<String> topics;
+    try {
+      topics = store.getPeers().stream()
+        .map(PeerInfo::getName)
+        .collect(Collectors.toList());
+    } catch (IOException e) {
+      LOG.warn("Failed to get peer information", e);
+      return;
+    }
+
+    TransactionRunners.run(transactionRunner, context -> {
+      for (String topic : topics) {
+        String messageId = AppMetadataStore.create(context).retrieveSubscriberState(topic, SUBSCRIBER);
+        lastMessageIds.put(topic, messageId);
+      }
+    });
+  }
+
+
   private void handleForbidden(PeerInfo peerInfo) throws IOException {
-    if (peerInfo.getTetherStatus() != TetheringStatus.PENDING) {
+    if (peerInfo.getTetheringStatus() != TetheringStatus.PENDING) {
       LOG.debug("Ignoring tethering rejection message from {}, current state: {}", peerInfo.getName(),
-                peerInfo.getTetherStatus());
+                peerInfo.getTetheringStatus());
       return;
     }
     // Set tethering status to rejected.
@@ -159,7 +180,7 @@ public class TetheringAgentService extends AbstractRetryableScheduledService {
   }
 
   private void handleResponse(HttpResponse resp, PeerInfo peerInfo) throws IOException {
-    if (peerInfo.getTetherStatus() == TetheringStatus.PENDING) {
+    if (peerInfo.getTetheringStatus() == TetheringStatus.PENDING) {
       LOG.debug("Peer {} transitioned to ACCEPTED state", peerInfo.getName());
       store.updatePeerStatusAndTimestamp(peerInfo.getName(), TetheringStatus.ACCEPTED);
     } else {
@@ -182,9 +203,10 @@ public class TetheringAgentService extends AbstractRetryableScheduledService {
       }
     }
 
-    lastMessageId = tetheringControlResponse.getLastMessageId();
+    String lastMessageId = tetheringControlResponse.getLastMessageId();
+    lastMessageIds.put(peerInfo.getName(), lastMessageId);
     TransactionRunners.run(transactionRunner, context -> {
-      AppMetadataStore.create(context).persistSubscriberState(TOPIC, SUBSCRIBER, lastMessageId);
+      AppMetadataStore.create(context).persistSubscriberState(peerInfo.getName(), SUBSCRIBER, lastMessageId);
     });
   }
 }

@@ -47,12 +47,13 @@ import javax.annotation.Nullable;
 /**
  * Main class for running remote agent service in Kubernetes.
  */
-public class TetherAgentServiceMain extends AbstractServiceMain<EnvironmentOptions> {
+public class
+TetheringAgentServiceMain extends AbstractServiceMain<EnvironmentOptions> {
   /**
    * Main entry point
    */
   public static void main(String[] args) throws Exception {
-    main(TetherAgentServiceMain.class, args);
+    main(TetheringAgentServiceMain.class, args);
   }
 
   @Override

@@ -121,7 +121,7 @@ public class TetheringHandler extends AbstractHttpHandler {
     if (System.currentTimeMillis() - peerInfo.getLastConnectionTime() < connectionTimeout * 1000L) {
       connectionStatus = TetheringConnectionStatus.ACTIVE;
     }
-    return new PeerStatus(peerInfo.getName(), peerInfo.getEndpoint(), peerInfo.getTetherStatus(),
+    return new PeerStatus(peerInfo.getName(), peerInfo.getEndpoint(), peerInfo.getTetheringStatus(),
                           peerInfo.getMetadata(), connectionStatus);
   }
 }

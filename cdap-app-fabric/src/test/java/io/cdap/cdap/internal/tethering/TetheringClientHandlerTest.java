@@ -284,7 +284,7 @@ public class TetheringClientHandlerTest {
     Assert.assertEquals(HttpResponseStatus.OK.code(), response.getResponseCode());
     PeerStatus peerStatus = GSON.fromJson(response.getResponseBodyAsString(), PeerStatus.class);
     Assert.assertEquals(SERVER_INSTANCE, peerStatus.getName());
-    Assert.assertEquals(TetheringStatus.PENDING, peerStatus.getTetherStatus());
+    Assert.assertEquals(TetheringStatus.PENDING, peerStatus.getTetheringStatus());
     Assert.assertEquals(TetheringConnectionStatus.ACTIVE, peerStatus.getConnectionStatus());
     Assert.assertEquals(serverConfig.getConnectionConfig().getURI().toString(), peerStatus.getEndpoint());
     Assert.assertEquals(PROJECT, peerStatus.getPeerMetadata().getMetadata().get("project"));
@@ -374,14 +374,14 @@ public class TetheringClientHandlerTest {
       }.getType();
       peers = GSON.fromJson(response.getResponseBodyAsString(), type);
       Assert.assertEquals(1, peers.size());
-      if (peers.get(0).getTetherStatus() == tetheringStatus && peers.get(0).getConnectionStatus() == connectionStatus) {
+      if (peers.get(0).getTetheringStatus() == tetheringStatus && peers.get(0).getConnectionStatus() == connectionStatus) {
         break;
       }
       Thread.sleep(500);
     }
     Assert.assertEquals(1, peers.size());
     PeerStatus peer = peers.get(0);
-    Assert.assertEquals(tetheringStatus, peer.getTetherStatus());
+    Assert.assertEquals(tetheringStatus, peer.getTetheringStatus());
     Assert.assertEquals(instanceName, peer.getName());
     Assert.assertEquals(endpoint, peer.getEndpoint());
     Assert.assertEquals(project, peer.getPeerMetadata().getMetadata().get("project"));

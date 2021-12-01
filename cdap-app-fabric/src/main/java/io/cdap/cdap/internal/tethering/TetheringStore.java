@@ -63,7 +63,7 @@ public class TetheringStore {
       fields.add(Fields.stringField(StoreDefinition.TetheringStore.PEER_NAME_FIELD, peerInfo.getName()));
       fields.add(Fields.stringField(StoreDefinition.TetheringStore.PEER_URI_FIELD, peerInfo.getEndpoint()));
       fields.add(Fields.stringField(StoreDefinition.TetheringStore.TETHERING_STATE_FIELD,
-                                    peerInfo.getTetherStatus().toString()));
+                                    peerInfo.getTetheringStatus().toString()));
       fields.add(Fields.longField(StoreDefinition.TetheringStore.LAST_CONNECTION_TIME_FIELD, 0L));
       fields.add(Fields.stringField(StoreDefinition.TetheringStore.PEER_METADATA_FIELD,
                                     GSON.toJson(peerInfo.getMetadata())));

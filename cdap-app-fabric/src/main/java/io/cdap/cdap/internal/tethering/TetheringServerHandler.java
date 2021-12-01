@@ -96,7 +96,7 @@ public class TetheringServerHandler extends AbstractHttpHandler {
     throws IOException, NotImplementedException, PeerNotFoundException, ForbiddenException, BadRequestException {
     checkTetheringServerEnabled();
     store.updatePeerTimestamp(peer);
-    TetheringStatus tetheringStatus = store.getPeer(peer).getTetherStatus();
+    TetheringStatus tetheringStatus = store.getPeer(peer).getTetheringStatus();
     if (tetheringStatus == TetheringStatus.PENDING) {
       throw new PeerNotFoundException(String.format("Peer %s not found", peer));
     } else if (tetheringStatus == TetheringStatus.REJECTED) {
@@ -209,11 +209,11 @@ public class TetheringServerHandler extends AbstractHttpHandler {
     throws NotImplementedException, PeerNotFoundException, IOException {
     checkTetheringServerEnabled();
     PeerInfo peerInfo = store.getPeer(peer);
-    if (peerInfo.getTetherStatus() == TetheringStatus.PENDING) {
+    if (peerInfo.getTetheringStatus() == TetheringStatus.PENDING) {
       store.updatePeerStatus(peerInfo.getName(), newStatus);
     } else {
       LOG.info("Cannot update tether state to {} as current state state is {}",
-               newStatus, peerInfo.getTetherStatus());
+               newStatus, peerInfo.getTetheringStatus());
     }
     responder.sendStatus(HttpResponseStatus.OK);
   }

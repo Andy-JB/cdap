@@ -90,7 +90,7 @@ public class TetheringClientHandler extends AbstractHttpHandler {
     }
     if (peer != null) {
       LOG.info("Peer {} is already present in state {}, ignoring tethering request",
-               peer.getName(), peer.getTetherStatus());
+               peer.getName(), peer.getTetheringStatus());
       responder.sendStatus(HttpResponseStatus.OK);
       return;
     }
