@@ -4659,11 +4659,44 @@
     </description>
   </property>
 
-  <property>
-    <name>tethering.connection.interval</name>
-    <value>10</value>
+ <property>
+   <name>tethering.agent.connection.interval.secs</name>
+   <value>10</value>
+   <description>
+     Interval for connecting to the tethering server.
+   </description>
+ </property>
+
+<property>
+    <name>tethering.agent.retry.policy.base.delay.ms</name>
+    <value>10000</value>
     <description>
-      Interval for connecting to the tethering server.
+      The base delay between retries in milliseconds
+    </description>
+  </property>
+
+  <property>
+    <name>tethering.agent.retry.policy.max.retries</name>
+    <value>8640</value>
+    <description>
+      The maximum number of retries to attempt before aborting
+    </description>
+  </property>
+
+  <property>
+    <name>tethering.agent.retry.policy.max.time.secs</name>
+    <value>86400</value>
+    <description>
+      The maximum elapsed time in seconds before retries are aborted
+    </description>
+  </property>
+
+  <property>
+    <name>tethering.agent.retry.policy.type</name>
+    <value>fixed.delay</value>
+    <description>
+      The type of retry policy for metrics publishing. Allowed options:
+      "none", "fixed.delay", or "exponential.backoff".
     </description>
   </property>
 

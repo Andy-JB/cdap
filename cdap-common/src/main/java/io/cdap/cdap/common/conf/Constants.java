@@ -1785,7 +1785,7 @@ public final class Constants {
     /**
      * Interval for connecting to the server.
      */
-    public static final String CONNECT_INTERVAL = "tethering.connect.interval";
+    public static final String CONNECT_INTERVAL = "tethering.connect.interval.secs";
 
     /**
      * Tethering connection timeout.
