@@ -1781,11 +1781,15 @@ public final class Constants {
   }
 
   public static final class Tethering {
-    public static final String TETHER_SERVER_ENABLE = "tethering.server.enabled";
+    public static final String TETHERING_SERVER_ENABLED = "tethering.server.enabled";
+    /**
+     * Prefix of per-client TMS topic used on the tethering server.
+     */
+    public static final String TOPIC_PREFIX = "tethering.topic.prefix";
     /**
      * Interval for connecting to the server.
      */
-    public static final String CONNECT_INTERVAL = "tethering.connect.interval.secs";
+    public static final String CONNECTION_INTERVAL = "tethering.connection.interval.secs";
 
     /**
      * Tethering connection timeout.

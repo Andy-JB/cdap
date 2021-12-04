@@ -52,6 +52,7 @@ public class TetheringHandler extends AbstractHttpHandler {
   private final CConfiguration cConf;
   private final TetheringStore store;
   private final MessagingService messagingService;
+  private final String topicPrefix;
 
   // Connection timeout in seconds.
   private int connectionTimeout;
@@ -61,6 +62,7 @@ public class TetheringHandler extends AbstractHttpHandler {
     this.cConf = cConf;
     this.store = store;
     this.messagingService = messagingService;
+    this.topicPrefix = cConf.get(Constants.Tethering.TOPIC_PREFIX);
   }
 
   @Override
@@ -104,9 +106,9 @@ public class TetheringHandler extends AbstractHttpHandler {
     store.getPeer(peer);
     store.deletePeer(peer);
     // Remove per-peer tethering topic if we're running on the server
-    if (cConf.getBoolean(Constants.Tethering.TETHER_SERVER_ENABLE)) {
+    if (cConf.getBoolean(Constants.Tethering.TETHERING_SERVER_ENABLED)) {
       TopicId topic = new TopicId(NamespaceId.SYSTEM.getNamespace(),
-                                  TetheringServerHandler.TETHERING_TOPIC_PREFIX + peer);
+                                  topicPrefix + peer);
       try {
         messagingService.deleteTopic(topic);
       } catch (TopicNotFoundException e) {

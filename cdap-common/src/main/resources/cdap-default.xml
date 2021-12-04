@@ -4480,7 +4480,7 @@
     </description>
   </property>
 
-  <property>CommonDirectiveExecutor
+  <property>
     <name>task.worker.preload.artifacts</name>
     <value></value>
     <description>
@@ -4697,6 +4697,14 @@
     <description>
       The type of retry policy for metrics publishing. Allowed options:
       "none", "fixed.delay", or "exponential.backoff".
+    </description>
+  </property>
+
+  <property>
+    <name>tethering.topic.prefix</name>
+    <value>tethering_</value>
+    <description>
+      TMS topic prefix used on tethering server
     </description>
   </property>
 

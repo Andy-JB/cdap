@@ -77,6 +77,7 @@ public class TetheringServerHandlerTest {
   private static CConfiguration cConf;
   private static Injector injector;
   private static TransactionManager txManager;
+  private static String topicPrefix;
 
   private NettyHttpService service;
   private ClientConfig config;
@@ -84,6 +85,7 @@ public class TetheringServerHandlerTest {
   @BeforeClass
   public static void setup() {
     cConf = CConfiguration.create();
+    topicPrefix = cConf.get(Constants.Tethering.TOPIC_PREFIX);
     injector = Guice.createInjector(
       new ConfigModule(cConf),
       new SystemDatasetRuntimeModule().getInMemoryModules(),
@@ -120,13 +122,12 @@ public class TetheringServerHandlerTest {
 
   @Before
   public void setUp() throws Exception {
-    TransactionRunner transactionRunner = injector.getInstance(TransactionRunner.class);
     // Define all StructuredTable before starting any services that need StructuredTable
     StoreDefinition.createAllTables(injector.getInstance(StructuredTableAdmin.class));
-    cConf.setBoolean(Constants.Tethering.TETHER_SERVER_ENABLE, true);
+    cConf.setBoolean(Constants.Tethering.TETHERING_SERVER_ENABLED, true);
     cConf.setInt(Constants.Tethering.CONNECTION_TIMEOUT_SECONDS, 1);
     service = new CommonNettyHttpServiceBuilder(CConfiguration.create(), getClass().getSimpleName())
-      .setHttpHandlers(new TetheringServerHandler(cConf, tetheringStore, messagingService, transactionRunner),
+      .setHttpHandlers(new TetheringServerHandler(cConf, tetheringStore, messagingService),
                        new TetheringHandler(cConf, tetheringStore, messagingService))
       .build();
     service.start();
@@ -237,7 +238,7 @@ public class TetheringServerHandlerTest {
     createTethering("xyz", NAMESPACES);
 
     TopicId topic = new TopicId(NamespaceId.SYSTEM.getNamespace(),
-                                TetheringServerHandler.TETHERING_TOPIC_PREFIX + "xyz");
+                                topicPrefix + "xyz");
     // Per-peer messaging topic should be created
     TopicMetadata metadata = messagingService.getTopic(topic);
     Assert.assertEquals(topic, metadata.getTopicId());

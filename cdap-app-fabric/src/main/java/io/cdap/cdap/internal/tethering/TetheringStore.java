@@ -19,7 +19,6 @@ package io.cdap.cdap.internal.tethering;
 import com.google.common.collect.ImmutableList;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.google.inject.Inject;
 import io.cdap.cdap.api.dataset.lib.CloseableIterator;
 import io.cdap.cdap.spi.data.StructuredRow;
 import io.cdap.cdap.spi.data.StructuredTable;
@@ -45,7 +44,6 @@ public class TetheringStore {
 
   private final TransactionRunner transactionRunner;
 
-  @Inject
   TetheringStore(TransactionRunner transactionRunner) {
     this.transactionRunner = transactionRunner;
   }

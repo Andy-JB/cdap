@@ -19,6 +19,7 @@ package io.cdap.cdap.internal.tethering;
 import com.google.common.net.HttpHeaders;
 import io.cdap.cdap.common.internal.remote.RemoteAuthenticator;
 import io.cdap.common.http.HttpMethod;
+import io.cdap.common.http.HttpRequest;
 import io.cdap.common.http.HttpRequestConfig;
 import io.cdap.common.http.HttpRequests;
 import io.cdap.common.http.HttpResponse;
@@ -43,19 +44,19 @@ public class TetheringUtils {
 
   public static HttpResponse sendHttpRequest(HttpMethod method, URI endpoint, @Nullable String content)
     throws IOException {
-    io.cdap.common.http.HttpRequest.Builder builder;
+   HttpRequest.Builder builder;
     switch (method) {
       case GET:
-        builder = io.cdap.common.http.HttpRequest.get(endpoint.toURL());
+        builder = HttpRequest.get(endpoint.toURL());
         break;
       case PUT:
-        builder = io.cdap.common.http.HttpRequest.put(endpoint.toURL());
+        builder = HttpRequest.put(endpoint.toURL());
         break;
       case POST:
-        builder = io.cdap.common.http.HttpRequest.post(endpoint.toURL());
+        builder = HttpRequest.post(endpoint.toURL());
         break;
       case DELETE:
-        builder = io.cdap.common.http.HttpRequest.delete(endpoint.toURL());
+        builder = HttpRequest.delete(endpoint.toURL());
         break;
       default:
         throw new RuntimeException("Unexpected HTTP method: " + method);

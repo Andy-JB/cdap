@@ -34,7 +34,6 @@ import io.cdap.cdap.messaging.TopicMetadata;
 import io.cdap.cdap.messaging.context.MultiThreadMessagingContext;
 import io.cdap.cdap.proto.id.NamespaceId;
 import io.cdap.cdap.proto.id.TopicId;
-import io.cdap.cdap.spi.data.transaction.TransactionRunner;
 import io.cdap.http.AbstractHttpHandler;
 import io.cdap.http.HandlerContext;
 import io.cdap.http.HttpResponder;
@@ -64,21 +63,19 @@ import javax.ws.rs.QueryParam;
 public class TetheringServerHandler extends AbstractHttpHandler {
   private static final Logger LOG = LoggerFactory.getLogger(TetheringServerHandler.class);
   private static final Gson GSON = new GsonBuilder().create();
-  static final String TETHERING_TOPIC_PREFIX = "tethering_";
   private final CConfiguration cConf;
   private final TetheringStore store;
   private final MessagingService messagingService;
   private final MultiThreadMessagingContext messagingContext;
-  private final TransactionRunner transactionRunner;
+  private final String topicPrefix;
 
   @Inject
-  TetheringServerHandler(CConfiguration cConf, TetheringStore store, MessagingService messagingService,
-                         TransactionRunner transactionRunner) {
+  TetheringServerHandler(CConfiguration cConf, TetheringStore store, MessagingService messagingService) {
     this.cConf = cConf;
     this.store = store;
     this.messagingService = messagingService;
     this.messagingContext = new MultiThreadMessagingContext(messagingService);
-    this.transactionRunner = transactionRunner;
+    this.topicPrefix = cConf.get(Constants.Tethering.TOPIC_PREFIX);
   }
 
   @Override
@@ -106,7 +103,7 @@ public class TetheringServerHandler extends AbstractHttpHandler {
 
     List<TetheringControlMessage> commands = new ArrayList<>();
     MessageFetcher fetcher = messagingContext.getMessageFetcher();
-    TopicId topic = new TopicId(NamespaceId.SYSTEM.getNamespace(), TETHERING_TOPIC_PREFIX + peer);
+    TopicId topic = new TopicId(NamespaceId.SYSTEM.getNamespace(), topicPrefix + peer);
     String lastMessageId = messageId;
     try (CloseableIterator<Message> iterator =
            fetcher.fetch(topic.getNamespace(), topic.getTopic(), 1, messageId)) {
@@ -142,7 +139,7 @@ public class TetheringServerHandler extends AbstractHttpHandler {
     String content = request.content().toString(StandardCharsets.UTF_8);
     TetheringConnectionRequest tetherRequest = GSON.fromJson(content, TetheringConnectionRequest.class);
     TopicId topicId = new TopicId(NamespaceId.SYSTEM.getNamespace(),
-                                  TETHERING_TOPIC_PREFIX + tetherRequest.getPeer());
+                                  topicPrefix + tetherRequest.getPeer());
     try {
       messagingService.createTopic(new TopicMetadata(topicId, Collections.emptyMap()));
     } catch (TopicAlreadyExistsException e) {
@@ -200,7 +197,7 @@ public class TetheringServerHandler extends AbstractHttpHandler {
   }
 
   private void checkTetheringServerEnabled() throws NotImplementedException {
-    if (!cConf.getBoolean(Constants.Tethering.TETHER_SERVER_ENABLE)) {
+    if (!cConf.getBoolean(Constants.Tethering.TETHERING_SERVER_ENABLED)) {
       throw new NotImplementedException("Tethering is not enabled");
     }
   }

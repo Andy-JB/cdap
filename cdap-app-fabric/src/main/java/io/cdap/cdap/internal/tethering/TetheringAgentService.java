@@ -63,7 +63,7 @@ public class TetheringAgentService extends AbstractRetryableScheduledService {
   @Inject
   TetheringAgentService(CConfiguration cConf, TransactionRunner transactionRunner) {
     super(RetryStrategies.fromConfiguration(cConf, "tethering.agent."));
-    this.connectionInterval = TimeUnit.SECONDS.toMillis(cConf.getLong(Constants.Tethering.CONNECT_INTERVAL));
+    this.connectionInterval = TimeUnit.SECONDS.toMillis(cConf.getLong(Constants.Tethering.CONNECTION_INTERVAL));
     this.cConf = cConf;
     this.transactionRunner = transactionRunner;
     this.store = new TetheringStore(transactionRunner);

@@ -137,7 +137,7 @@ public class TetheringClientHandlerTest {
           .setSSLEnabled(false)
           .build()).build();
 
-    cConf.setInt(Constants.Tethering.CONNECT_INTERVAL, 1);
+    cConf.setInt(Constants.Tethering.CONNECTION_INTERVAL, 1);
     cConf.setInt(Constants.Tethering.CONNECTION_TIMEOUT_SECONDS, 5);
     cConf.set(Constants.INSTANCE_NAME, CLIENT_INSTANCE);
 
