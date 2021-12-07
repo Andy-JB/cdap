@@ -15,13 +15,13 @@
  */
 package io.cdap.cdap.internal.tethering;
 
-import io.cdap.cdap.common.NotFoundException;
+import io.cdap.cdap.common.BadRequestException;
 
 /**
- * Thrown when a tethered peer is not found.
+ * Thrown when a tethered peer already exists.
  */
-public class PeerNotFoundException extends NotFoundException {
-  public PeerNotFoundException(String peerName) {
-    super(String.format("Peer %s not found", peerName));
+public class PeerAlreadyExistsException extends BadRequestException {
+  public PeerAlreadyExistsException(String peerName, TetheringStatus tetheringStatus) {
+    super(String.format("Peer %s already exists in state %s", peerName, tetheringStatus));
   }
 }

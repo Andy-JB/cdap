@@ -58,7 +58,7 @@ public class TetheringAgentService extends AbstractRetryableScheduledService {
   private final TetheringStore store;
   private final String instanceName;
   private final TransactionRunner transactionRunner;
-  private Map<String, String> lastMessageIds;
+  private final Map<String, String> lastMessageIds;
 
   @Inject
   TetheringAgentService(CConfiguration cConf, TransactionRunner transactionRunner) {
@@ -68,6 +68,7 @@ public class TetheringAgentService extends AbstractRetryableScheduledService {
     this.transactionRunner = transactionRunner;
     this.store = new TetheringStore(transactionRunner);
     this.instanceName = cConf.get(Constants.INSTANCE_NAME);
+    this.lastMessageIds = new HashMap<>();
   }
 
   @Override
@@ -99,7 +100,7 @@ public class TetheringAgentService extends AbstractRetryableScheduledService {
                                     "Peer %s doesn't have an endpoint", peer.getName());
         String uri = CONNECT_CONTROL_CHANNEL + instanceName;
         String lastMessageId = lastMessageIds.get(peer);
-        if (lastMessageId !=  null) {
+        if (lastMessageId != null) {
           uri = uri + "?messageId=" + URLEncoder.encode(lastMessageId, "UTF-8");
         }
         HttpResponse resp = TetheringUtils.sendHttpRequest(HttpMethod.GET, new URI(peer.getEndpoint())
@@ -123,6 +124,14 @@ public class TetheringAgentService extends AbstractRetryableScheduledService {
         LOG.debug("Failed to create control channel to {}", peer, e);
       }
     }
+
+    // Update last message ids in the store for all peers
+    TransactionRunners.run(transactionRunner, context -> {
+      for (Map.Entry<String, String> entry : lastMessageIds.entrySet()) {
+        AppMetadataStore.create(context).persistSubscriberState(entry.getKey(), SUBSCRIBER, entry.getValue());
+      }
+    });
+
     return connectionInterval;
   }
 
@@ -130,13 +139,13 @@ public class TetheringAgentService extends AbstractRetryableScheduledService {
     // Update last connection timestamp.
     store.updatePeerTimestamp(peerInfo.getName());
 
-    TetheringConnectionRequest tetherRequest = new TetheringConnectionRequest(instanceName,
-                                                                              peerInfo.getMetadata()
-                                                                          .getNamespaceAllocations());
+    TetheringConnectionRequest tetherRequest = new TetheringConnectionRequest(
+      instanceName,
+      peerInfo.getMetadata().getNamespaceAllocations());
     try {
+      URI endpoint = new URI(peerInfo.getEndpoint()).resolve(TetheringClientHandler.CREATE_TETHER);
       HttpResponse response = TetheringUtils.sendHttpRequest(HttpMethod.POST,
-                                                             new URI(peerInfo.getEndpoint())
-                                                            .resolve(TetheringClientHandler.CREATE_TETHER),
+                                                             endpoint,
                                                              GSON.toJson(tetherRequest));
       if (response.getResponseCode() != 200) {
         LOG.error("Failed to initiate tether with peer {}, response body: {}, code: {}",
@@ -149,10 +158,9 @@ public class TetheringAgentService extends AbstractRetryableScheduledService {
   }
 
   private void initializeMessageIds() {
-    lastMessageIds = new HashMap<>();
-    List<String> topics;
+    List<String> peers;
     try {
-      topics = store.getPeers().stream()
+      peers = store.getPeers().stream()
         .map(PeerInfo::getName)
         .collect(Collectors.toList());
     } catch (IOException e) {
@@ -161,9 +169,9 @@ public class TetheringAgentService extends AbstractRetryableScheduledService {
     }
 
     TransactionRunners.run(transactionRunner, context -> {
-      for (String topic : topics) {
-        String messageId = AppMetadataStore.create(context).retrieveSubscriberState(topic, SUBSCRIBER);
-        lastMessageIds.put(topic, messageId);
+      for (String peer : peers) {
+        String messageId = AppMetadataStore.create(context).retrieveSubscriberState(peer, SUBSCRIBER);
+        lastMessageIds.put(peer, messageId);
       }
     });
   }
@@ -205,8 +213,5 @@ public class TetheringAgentService extends AbstractRetryableScheduledService {
 
     String lastMessageId = tetheringControlResponse.getLastMessageId();
     lastMessageIds.put(peerInfo.getName(), lastMessageId);
-    TransactionRunners.run(transactionRunner, context -> {
-      AppMetadataStore.create(context).persistSubscriberState(peerInfo.getName(), SUBSCRIBER, lastMessageId);
-    });
   }
 }

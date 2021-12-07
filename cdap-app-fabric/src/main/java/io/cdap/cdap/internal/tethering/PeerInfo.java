@@ -20,13 +20,9 @@ import java.util.Objects;
 import javax.annotation.Nullable;
 
 /**
- * Peer information that's persisted in the tether store.
+ * Peer information that's persisted in the tethering store.
  */
-public class PeerInfo {
-  private final String name;
-  private final String endpoint;
-  private final TetheringStatus tetheringStatus;
-  private final PeerMetadata metadata;
+public class PeerInfo extends PeerBase {
   private final long lastConnectionTime;
 
   public PeerInfo(String name, @Nullable String endpoint, TetheringStatus tetheringStatus, PeerMetadata metadata) {
@@ -35,28 +31,8 @@ public class PeerInfo {
 
   public PeerInfo(String name, @Nullable String endpoint, TetheringStatus tetheringStatus,
                   PeerMetadata metadata, long lastConnectionTime) {
-    this.name = name;
-    this.endpoint = endpoint;
-    this.tetheringStatus = tetheringStatus;
-    this.metadata = metadata;
+    super(name, endpoint, tetheringStatus, metadata);
     this.lastConnectionTime = lastConnectionTime;
-  }
-
-  public String getName() {
-    return name;
-  }
-
-  @Nullable
-  public String getEndpoint() {
-    return endpoint;
-  }
-
-  public TetheringStatus getTetheringStatus() {
-    return tetheringStatus;
-  }
-
-  public PeerMetadata getMetadata() {
-    return metadata;
   }
 
   public long getLastConnectionTime() {
@@ -65,22 +41,15 @@ public class PeerInfo {
 
   @Override
   public boolean equals(Object other) {
-    if (this == other) {
-      return true;
-    }
-    if (other == null || getClass() != other.getClass()) {
+    if (!super.equals(other)) {
       return false;
     }
     PeerInfo that = (PeerInfo) other;
-    return Objects.equals(this.name, that.name) &&
-      Objects.equals(this.endpoint, that.endpoint) &&
-      Objects.equals(this.tetheringStatus, that.tetheringStatus) &&
-      Objects.equals(this.metadata, that.metadata) &&
-      Objects.equals(this.lastConnectionTime, that.lastConnectionTime);
+    return Objects.equals(this.lastConnectionTime, that.lastConnectionTime);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(name, endpoint, tetheringStatus, metadata, lastConnectionTime);
+    return Objects.hash(super.hashCode(), lastConnectionTime);
   }
 }

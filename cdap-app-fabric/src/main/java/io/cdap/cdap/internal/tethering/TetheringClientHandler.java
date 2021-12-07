@@ -17,12 +17,9 @@
 package io.cdap.cdap.internal.tethering;
 
 import com.google.gson.Gson;
-import io.cdap.cdap.common.BadRequestException;
 import io.cdap.cdap.common.conf.CConfiguration;
 import io.cdap.cdap.common.conf.Constants;
 import io.cdap.cdap.common.internal.remote.RemoteAuthenticator;
-import io.cdap.common.http.HttpMethod;
-import io.cdap.common.http.HttpResponse;
 import io.cdap.http.AbstractHttpHandler;
 import io.cdap.http.HandlerContext;
 import io.cdap.http.HttpResponder;
@@ -31,7 +28,6 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import javax.inject.Inject;
@@ -89,28 +85,10 @@ public class TetheringClientHandler extends AbstractHttpHandler {
       // Do nothing, expected if peer is not already configured.
     }
     if (peer != null) {
-      LOG.info("Peer {} is already present in state {}, ignoring tethering request",
-               peer.getName(), peer.getTetheringStatus());
-      responder.sendStatus(HttpResponseStatus.OK);
-      return;
+      throw new PeerAlreadyExistsException(peer.getName(), peer.getTetheringStatus());
     }
 
     List<NamespaceAllocation> namespaces = tetheringCreationRequest.getNamespaceAllocations();
-    TetheringConnectionRequest tetheringConnectionRequest = new TetheringConnectionRequest(instanceName,
-                                                                                           namespaces);
-    if (tetheringCreationRequest.getEndpoint() == null) {
-      throw new BadRequestException("Endpoint is null");
-    }
-    URI endpoint = new URI(tetheringCreationRequest.getEndpoint());
-    HttpResponse response = TetheringUtils.sendHttpRequest(HttpMethod.POST, endpoint.resolve(CREATE_TETHER),
-                                                           GSON.toJson(tetheringConnectionRequest));
-    if (response.getResponseCode() != 200) {
-      LOG.error("Failed to send tether request, body: {}, code: {}",
-                response.getResponseBody(), response.getResponseCode());
-      responder.sendStatus(HttpResponseStatus.valueOf(response.getResponseCode()));
-      return;
-    }
-
     PeerMetadata peerMetadata = new PeerMetadata(namespaces, tetheringCreationRequest.getMetadata());
     PeerInfo peerInfo = new PeerInfo(tetheringCreationRequest.getPeer(), tetheringCreationRequest.getEndpoint(),
                                      TetheringStatus.PENDING, peerMetadata);
