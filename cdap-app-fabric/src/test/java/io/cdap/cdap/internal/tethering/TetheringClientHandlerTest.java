@@ -155,7 +155,8 @@ public class TetheringClientHandlerTest {
           .setSSLEnabled(false)
           .build()).build();
 
-    tetheringAgentService = new TetheringAgentService(cConf, injector.getInstance(TransactionRunner.class));
+    tetheringAgentService = new TetheringAgentService(cConf, injector.getInstance(TransactionRunner.class),
+                                                      tetheringStore);
     Assert.assertEquals(Service.State.RUNNING, tetheringAgentService.startAndWait());
   }
 
@@ -284,14 +285,14 @@ public class TetheringClientHandlerTest {
       .build();
     response = HttpRequests.execute(request);
     Assert.assertEquals(HttpResponseStatus.OK.code(), response.getResponseCode());
-    PeerStatus peerStatus = GSON.fromJson(response.getResponseBodyAsString(), PeerStatus.class);
-    Assert.assertEquals(SERVER_INSTANCE, peerStatus.getName());
-    Assert.assertEquals(TetheringStatus.PENDING, peerStatus.getTetheringStatus());
-    Assert.assertEquals(TetheringConnectionStatus.ACTIVE, peerStatus.getConnectionStatus());
-    Assert.assertEquals(serverConfig.getConnectionConfig().getURI().toString(), peerStatus.getEndpoint());
-    Assert.assertEquals(PROJECT, peerStatus.getMetadata().getMetadata().get("project"));
-    Assert.assertEquals(LOCATION, peerStatus.getMetadata().getMetadata().get("location"));
-    Assert.assertEquals(NAMESPACES, peerStatus.getMetadata().getNamespaceAllocations());
+    PeerState peerState = GSON.fromJson(response.getResponseBodyAsString(), PeerState.class);
+    Assert.assertEquals(SERVER_INSTANCE, peerState.getName());
+    Assert.assertEquals(TetheringStatus.PENDING, peerState.getTetheringStatus());
+    Assert.assertEquals(TetheringConnectionStatus.ACTIVE, peerState.getConnectionStatus());
+    Assert.assertEquals(serverConfig.getConnectionConfig().getURI().toString(), peerState.getEndpoint());
+    Assert.assertEquals(PROJECT, peerState.getMetadata().getMetadata().get("project"));
+    Assert.assertEquals(LOCATION, peerState.getMetadata().getMetadata().get("location"));
+    Assert.assertEquals(NAMESPACES, peerState.getMetadata().getNamespaceAllocations());
 
     // cleanup
     deleteTethering(SERVER_INSTANCE);
@@ -382,13 +383,13 @@ public class TetheringClientHandlerTest {
                                       String project, String location, List<NamespaceAllocation> namespaces,
                                       TetheringConnectionStatus connectionStatus)
     throws IOException, InterruptedException {
-    List<PeerStatus> peers = new ArrayList<>();
+    List<PeerState> peers = new ArrayList<>();
     for (int retry = 0; retry < 5; ++retry) {
       HttpRequest request = HttpRequest.builder(HttpMethod.GET, clientConfig.resolveURL("tethering/connections"))
         .build();
       HttpResponse response = HttpRequests.execute(request);
       Assert.assertEquals(HttpResponseStatus.OK.code(), response.getResponseCode());
-      Type type = new TypeToken<List<PeerStatus>>() {
+      Type type = new TypeToken<List<PeerState>>() {
       }.getType();
       peers = GSON.fromJson(response.getResponseBodyAsString(), type);
       Assert.assertEquals(1, peers.size());
@@ -399,7 +400,7 @@ public class TetheringClientHandlerTest {
       Thread.sleep(500);
     }
     Assert.assertEquals(1, peers.size());
-    PeerStatus peer = peers.get(0);
+    PeerState peer = peers.get(0);
     Assert.assertEquals(tetheringStatus, peer.getTetheringStatus());
     Assert.assertEquals(instanceName, peer.getName());
     Assert.assertEquals(endpoint, peer.getEndpoint());

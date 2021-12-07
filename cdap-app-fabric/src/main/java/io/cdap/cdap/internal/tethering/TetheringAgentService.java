@@ -61,12 +61,12 @@ public class TetheringAgentService extends AbstractRetryableScheduledService {
   private final Map<String, String> lastMessageIds;
 
   @Inject
-  TetheringAgentService(CConfiguration cConf, TransactionRunner transactionRunner) {
+  TetheringAgentService(CConfiguration cConf, TransactionRunner transactionRunner, TetheringStore store) {
     super(RetryStrategies.fromConfiguration(cConf, "tethering.agent."));
     this.connectionInterval = TimeUnit.SECONDS.toMillis(cConf.getLong(Constants.Tethering.CONNECTION_INTERVAL));
     this.cConf = cConf;
     this.transactionRunner = transactionRunner;
-    this.store = new TetheringStore(transactionRunner);
+    this.store = store;
     this.instanceName = cConf.get(Constants.INSTANCE_NAME);
     this.lastMessageIds = new HashMap<>();
   }

@@ -78,11 +78,11 @@ public class TetheringHandler extends AbstractHttpHandler {
   @GET
   @Path("/tethering/connections")
   public void getTethers(HttpRequest request, HttpResponder responder) throws IOException {
-    List<PeerStatus> peerStatusList = new ArrayList<>();
+    List<PeerState> peerStateList = new ArrayList<>();
     for (PeerInfo peer : store.getPeers()) {
-      peerStatusList.add(getPeerStatus(peer));
+      peerStateList.add(getPeerStatus(peer));
     }
-    responder.sendJson(HttpResponseStatus.OK, GSON.toJson(peerStatusList));
+    responder.sendJson(HttpResponseStatus.OK, GSON.toJson(peerStateList));
   }
 
   /**
@@ -118,12 +118,12 @@ public class TetheringHandler extends AbstractHttpHandler {
     responder.sendStatus(HttpResponseStatus.OK);
   }
 
-  private PeerStatus getPeerStatus(PeerInfo peerInfo) {
+  private PeerState getPeerStatus(PeerInfo peerInfo) {
     TetheringConnectionStatus connectionStatus = TetheringConnectionStatus.INACTIVE;
     if (System.currentTimeMillis() - peerInfo.getLastConnectionTime() < connectionTimeout * 1000L) {
       connectionStatus = TetheringConnectionStatus.ACTIVE;
     }
-    return new PeerStatus(peerInfo.getName(), peerInfo.getEndpoint(), peerInfo.getTetheringStatus(),
-                          peerInfo.getMetadata(), connectionStatus);
+    return new PeerState(peerInfo.getName(), peerInfo.getEndpoint(), peerInfo.getTetheringStatus(),
+                         peerInfo.getMetadata(), connectionStatus);
   }
 }

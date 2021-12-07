@@ -35,6 +35,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import javax.inject.Inject;
 
 /**
  * Store for tethering data.
@@ -44,6 +45,7 @@ public class TetheringStore {
 
   private final TransactionRunner transactionRunner;
 
+  @Inject
   TetheringStore(TransactionRunner transactionRunner) {
     this.transactionRunner = transactionRunner;
   }

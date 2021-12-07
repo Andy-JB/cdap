@@ -21,11 +21,11 @@ import java.util.Objects;
 /**
  * Information about tethered peers that's returned by REST APIs.
  */
-public class PeerStatus extends PeerBase {
+public class PeerState extends PeerBase {
   private final TetheringConnectionStatus connectionStatus;
 
-  public PeerStatus(String name, String endpoint, TetheringStatus tetheringStatus, PeerMetadata metadata,
-                    TetheringConnectionStatus connectionStatus) {
+  public PeerState(String name, String endpoint, TetheringStatus tetheringStatus, PeerMetadata metadata,
+                   TetheringConnectionStatus connectionStatus) {
     super(name, endpoint, tetheringStatus, metadata);
     this.connectionStatus = connectionStatus;
   }
@@ -39,7 +39,7 @@ public class PeerStatus extends PeerBase {
     if (!super.equals(other)) {
       return false;
     }
-    PeerStatus that = (PeerStatus) other;
+    PeerState that = (PeerState) other;
     return Objects.equals(this.connectionStatus, that.connectionStatus);
   }
 

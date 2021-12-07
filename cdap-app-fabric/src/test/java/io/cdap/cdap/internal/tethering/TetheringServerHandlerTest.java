@@ -286,8 +286,8 @@ public class TetheringServerHandlerTest {
     doHttpRequest(HttpMethod.POST, "tethering/connect", GSON.toJson(tetheringRequest));
   }
 
-  private List<PeerStatus> getTetheringStatus() throws IOException {
-    Type type = new TypeToken<List<PeerStatus>>() { }.getType();
+  private List<PeerState> getTetheringStatus() throws IOException {
+    Type type = new TypeToken<List<PeerState>>() { }.getType();
     String responseBody = doHttpRequest(HttpMethod.GET, "tethering/connections");
     return GSON.fromJson(responseBody, type);
   }
@@ -295,12 +295,12 @@ public class TetheringServerHandlerTest {
   private void expectTetheringStatus(String peerName, TetheringStatus tetheringStatus,
                                      List<NamespaceAllocation> namespaces, TetheringConnectionStatus connectionStatus)
     throws IOException {
-    List<PeerStatus> peerStatusList = getTetheringStatus();
-    Assert.assertEquals(1, peerStatusList.size());
+    List<PeerState> peerStateList = getTetheringStatus();
+    Assert.assertEquals(1, peerStateList.size());
     PeerMetadata expectedPeerMetadata = new PeerMetadata(namespaces, Collections.emptyMap());
-    PeerStatus expectedPeerInfo = new PeerStatus(peerName, null, tetheringStatus,
-                                                 expectedPeerMetadata, connectionStatus);
-    Assert.assertEquals(expectedPeerInfo, peerStatusList.get(0));
+    PeerState expectedPeerInfo = new PeerState(peerName, null, tetheringStatus,
+                                               expectedPeerMetadata, connectionStatus);
+    Assert.assertEquals(expectedPeerInfo, peerStateList.get(0));
   }
 
   private void deleteTethering() throws IOException {
