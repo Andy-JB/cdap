@@ -16,6 +16,7 @@
 
 package io.cdap.cdap.internal.tethering;
 
+import com.google.common.io.Closeables;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import io.cdap.cdap.api.dataset.lib.CloseableIterator;
@@ -35,15 +36,21 @@ import io.cdap.cdap.messaging.context.MultiThreadMessagingContext;
 import io.cdap.cdap.proto.id.NamespaceId;
 import io.cdap.cdap.proto.id.TopicId;
 import io.cdap.http.AbstractHttpHandler;
+import io.cdap.http.BodyProducer;
 import io.cdap.http.HandlerContext;
 import io.cdap.http.HttpResponder;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -55,6 +62,8 @@ import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.core.MediaType;
 
 /**
  * {@link io.cdap.http.HttpHandler} to manage tethering server v3 REST APIs
@@ -63,6 +72,7 @@ import javax.ws.rs.QueryParam;
 public class TetheringServerHandler extends AbstractHttpHandler {
   private static final Logger LOG = LoggerFactory.getLogger(TetheringServerHandler.class);
   private static final Gson GSON = new GsonBuilder().create();
+  private static final int MAX_CHUNK_SIZE = 4096;
   private final CConfiguration cConf;
   private final TetheringStore store;
   private final MessagingService messagingService;
@@ -124,7 +134,31 @@ public class TetheringServerHandler extends AbstractHttpHandler {
       commands.add(new TetheringControlMessage(TetheringControlMessage.Type.KEEPALIVE));
     }
     TetheringControlResponse tetheringControlResponse = new TetheringControlResponse(lastMessageId, commands);
-    responder.sendJson(HttpResponseStatus.OK, GSON.toJson(tetheringControlResponse));
+    final InputStream in = new ByteArrayInputStream(GSON.toJson(tetheringControlResponse).getBytes());
+    try {
+      responder.sendContent(HttpResponseStatus.OK, new BodyProducer() {
+
+        @Override
+        public ByteBuf nextChunk() throws Exception {
+          ByteBuf buffer = Unpooled.buffer(MAX_CHUNK_SIZE);
+          buffer.writeBytes(in, MAX_CHUNK_SIZE);
+          return buffer;
+        }
+
+        @Override
+        public void finished() {
+          Closeables.closeQuietly(in);
+        }
+
+        @Override
+        public void handleError(@Nullable Throwable cause) {
+          Closeables.closeQuietly(in);
+        }
+      }, new DefaultHttpHeaders().add(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_OCTET_STREAM));
+    } catch (Exception e) {
+      Closeables.closeQuietly(in);
+      throw e;
+    }
   }
 
   /**

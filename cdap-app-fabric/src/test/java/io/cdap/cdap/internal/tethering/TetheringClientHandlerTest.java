@@ -143,7 +143,7 @@ public class TetheringClientHandlerTest {
 
     MessagingService messagingService = injector.getInstance(MessagingService.class);
     clientService = new CommonNettyHttpServiceBuilder(conf, getClass().getSimpleName() + "_client")
-      .setHttpHandlers(new TetheringClientHandler(cConf, tetheringStore),
+      .setHttpHandlers(new TetheringClientHandler(tetheringStore),
                        new TetheringHandler(cConf, tetheringStore, messagingService))
       .build();
     clientService.start();
@@ -202,7 +202,7 @@ public class TetheringClientHandlerTest {
     String serverEndpoint = serverConfig.getConnectionConfig().getURI().toString();
     // Tethering state should transition to accepted on the client.
     waitForTetheringStatus(TetheringStatus.ACCEPTED, SERVER_INSTANCE, serverEndpoint,
-                           PROJECT, LOCATION, NAMESPACES, TetheringConnectionStatus.ACTIVE);
+                           PROJECT, LOCATION, NAMESPACES, true);
 
     // Duplicate tethering request should be fail.
     createTethering(SERVER_INSTANCE, PROJECT, LOCATION, NAMESPACES, TetheringStatus.ACCEPTED,
@@ -211,19 +211,19 @@ public class TetheringClientHandlerTest {
     // Tethering rejection should be ignored when tether is accepted.
     serverHandler.setResponseStatus(HttpResponseStatus.FORBIDDEN);
     waitForTetheringStatus(TetheringStatus.ACCEPTED, SERVER_INSTANCE, serverEndpoint,
-                           PROJECT, LOCATION, NAMESPACES, TetheringConnectionStatus.ACTIVE);
+                           PROJECT, LOCATION, NAMESPACES, true);
 
     // Make server respond with 500 error for control messages.
     serverHandler.setResponseStatus(HttpResponseStatus.INTERNAL_SERVER_ERROR);
     Thread.sleep(cConf.getInt(Constants.Tethering.CONNECTION_TIMEOUT_SECONDS) * 1000);
     // Control channel state should become inactive
     waitForTetheringStatus(TetheringStatus.ACCEPTED, SERVER_INSTANCE, serverEndpoint,
-                           PROJECT, LOCATION, NAMESPACES, TetheringConnectionStatus.INACTIVE);
+                           PROJECT, LOCATION, NAMESPACES, false);
     // Stop returning an error from the server.
     serverHandler.setResponseStatus(HttpResponseStatus.OK);
     // Control channel should become active
     waitForTetheringStatus(TetheringStatus.ACCEPTED, SERVER_INSTANCE, serverEndpoint,
-                           PROJECT, LOCATION, NAMESPACES, TetheringConnectionStatus.ACTIVE);
+                           PROJECT, LOCATION, NAMESPACES, true);
 
     // cleanup
     deleteTethering(SERVER_INSTANCE);
@@ -243,18 +243,18 @@ public class TetheringClientHandlerTest {
     String serverEndpoint = serverConfig.getConnectionConfig().getURI().toString();
     // Control channel should be active at this point.
     waitForTetheringStatus(TetheringStatus.PENDING, SERVER_INSTANCE, serverEndpoint,
-                           PROJECT, LOCATION, NAMESPACES, TetheringConnectionStatus.ACTIVE);
+                           PROJECT, LOCATION, NAMESPACES, true);
 
     // Server rejects tethering
     serverHandler.setResponseStatus(HttpResponseStatus.FORBIDDEN);
     // Tethering state should be updated to rejected
     waitForTetheringStatus(TetheringStatus.REJECTED, SERVER_INSTANCE, serverEndpoint,
-                           PROJECT, LOCATION, NAMESPACES, TetheringConnectionStatus.ACTIVE);
+                           PROJECT, LOCATION, NAMESPACES, true);
 
     // Server sends unexpected 200. It should be ignored.
     serverHandler.setResponseStatus(HttpResponseStatus.OK);
     waitForTetheringStatus(TetheringStatus.REJECTED, SERVER_INSTANCE, serverEndpoint,
-                           PROJECT, LOCATION, NAMESPACES, TetheringConnectionStatus.ACTIVE);
+                           PROJECT, LOCATION, NAMESPACES, true);
 
     // Tethering request should be fail as tethering has already been rejected.
     createTethering(SERVER_INSTANCE, PROJECT, LOCATION, NAMESPACES, TetheringStatus.REJECTED,
@@ -288,7 +288,7 @@ public class TetheringClientHandlerTest {
     PeerState peerState = GSON.fromJson(response.getResponseBodyAsString(), PeerState.class);
     Assert.assertEquals(SERVER_INSTANCE, peerState.getName());
     Assert.assertEquals(TetheringStatus.PENDING, peerState.getTetheringStatus());
-    Assert.assertEquals(TetheringConnectionStatus.ACTIVE, peerState.getConnectionStatus());
+    Assert.assertTrue(peerState.isActive());
     Assert.assertEquals(serverConfig.getConnectionConfig().getURI().toString(), peerState.getEndpoint());
     Assert.assertEquals(PROJECT, peerState.getMetadata().getMetadata().get("project"));
     Assert.assertEquals(LOCATION, peerState.getMetadata().getMetadata().get("location"));
@@ -376,12 +376,12 @@ public class TetheringClientHandlerTest {
     Assert.assertEquals(expectedResponseStatus.code(), response.getResponseCode());
 
     waitForTetheringStatus(expectedTetheringStatus, tetheringRequest.getPeer(), tetheringRequest.getEndpoint(),
-                           project, location, namespaceAllocations, TetheringConnectionStatus.ACTIVE);
+                           project, location, namespaceAllocations, true);
   }
 
   private void waitForTetheringStatus(TetheringStatus tetheringStatus, String instanceName, String endpoint,
                                       String project, String location, List<NamespaceAllocation> namespaces,
-                                      TetheringConnectionStatus connectionStatus)
+                                      boolean expectActive)
     throws IOException, InterruptedException {
     List<PeerState> peers = new ArrayList<>();
     for (int retry = 0; retry < 5; ++retry) {
@@ -394,7 +394,7 @@ public class TetheringClientHandlerTest {
       peers = GSON.fromJson(response.getResponseBodyAsString(), type);
       Assert.assertEquals(1, peers.size());
       if (peers.get(0).getTetheringStatus() == tetheringStatus
-        && peers.get(0).getConnectionStatus() == connectionStatus) {
+        && peers.get(0).isActive() == expectActive) {
         break;
       }
       Thread.sleep(500);
@@ -407,7 +407,7 @@ public class TetheringClientHandlerTest {
     Assert.assertEquals(project, peer.getMetadata().getMetadata().get("project"));
     Assert.assertEquals(location, peer.getMetadata().getMetadata().get("location"));
     Assert.assertEquals(namespaces, peer.getMetadata().getNamespaceAllocations());
-    Assert.assertEquals(connectionStatus, peer.getConnectionStatus());
+    Assert.assertEquals(expectActive, peer.isActive());
   }
 
   private void waitForTetheringCreated() throws InterruptedException {

@@ -30,8 +30,8 @@ public class PeerState extends PeerBase {
     this.connectionStatus = connectionStatus;
   }
 
-  public TetheringConnectionStatus getConnectionStatus() {
-    return connectionStatus;
+  public boolean isActive() {
+    return connectionStatus == TetheringConnectionStatus.ACTIVE;
   }
 
   @Override

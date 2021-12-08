@@ -127,8 +127,9 @@ public class TetheringAgentService extends AbstractRetryableScheduledService {
 
     // Update last message ids in the store for all peers
     TransactionRunners.run(transactionRunner, context -> {
+      AppMetadataStore appMetadataStore = AppMetadataStore.create(context);
       for (Map.Entry<String, String> entry : lastMessageIds.entrySet()) {
-        AppMetadataStore.create(context).persistSubscriberState(entry.getKey(), SUBSCRIBER, entry.getValue());
+        appMetadataStore.persistSubscriberState(entry.getKey(), SUBSCRIBER, entry.getValue());
       }
     });
 
@@ -169,8 +170,9 @@ public class TetheringAgentService extends AbstractRetryableScheduledService {
     }
 
     TransactionRunners.run(transactionRunner, context -> {
+      AppMetadataStore appMetadataStore = AppMetadataStore.create(context);
       for (String peer : peers) {
-        String messageId = AppMetadataStore.create(context).retrieveSubscriberState(peer, SUBSCRIBER);
+        String messageId = appMetadataStore.retrieveSubscriberState(peer, SUBSCRIBER);
         lastMessageIds.put(peer, messageId);
       }
     });
