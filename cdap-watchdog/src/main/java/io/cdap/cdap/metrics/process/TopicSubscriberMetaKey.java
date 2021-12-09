@@ -27,13 +27,13 @@ import java.util.Arrays;
  */
 public class TopicSubscriberMetaKey implements MetricsMetaKey {
 
-  private static final String keyFormat = "topic:%s:%s:subscriber:%s";
-  private static final String printFormat = "TopicSubscriberMetaKey{ key=%s }";
+  private static final String KEY_FORMAT = "topic:%s:%s:subscriber:%s";
+  private static final String PRINT_FORMAT = "TopicSubscriberMetaKey{ key=%s }";
 
   private final byte[] key;
 
   TopicSubscriberMetaKey(TopicId topicId, String subscriberId) {
-    String formattedKey = String.format(keyFormat, topicId.getNamespace(), topicId.getTopic(), subscriberId);
+    String formattedKey = String.format(KEY_FORMAT, topicId.getNamespace(), topicId.getTopic(), subscriberId);
     this.key = Bytes.toBytes(formattedKey);
   }
 
@@ -61,6 +61,6 @@ public class TopicSubscriberMetaKey implements MetricsMetaKey {
 
   @Override
   public String toString() {
-    return String.format(printFormat, Bytes.toString(key));
+    return String.format(PRINT_FORMAT, Bytes.toString(key));
   }
 }

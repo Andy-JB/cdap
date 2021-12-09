@@ -223,23 +223,15 @@ public class MessagingMetricsProcessorService extends AbstractExecutionThreadSer
   }
 
   private long resolveProcessingInterval(CConfiguration cConf, MetricsWriter metricsWriter, long commonInterval) {
-    try {
-      String pollConfig = String.format(Constants.Metrics.POLL_FREQUENCY_SECONDS_WRITER, metricsWriter.getID());
-      return TimeUnit.SECONDS.toMillis(cConf.getInt(pollConfig));
-    } catch (NullPointerException e) {
-      // If writer specific configuration is not available, use default configuration
-      return Math.min(commonInterval, Constants.Metrics.PROCESS_INTERVAL_MILLIS);
-    }
+    String pollConfig = String.format(Constants.Metrics.WRITER_POLL_FREQUENCY_SECONDS, metricsWriter.getID());
+    int pollValue = cConf.getInt(pollConfig, -1);
+    return pollValue == -1 ?
+      Math.min(commonInterval, Constants.Metrics.PROCESS_INTERVAL_MILLIS) : TimeUnit.SECONDS.toMillis(pollValue);
   }
 
   private boolean getSyncWriteWithPollFreq(MetricsWriter writer, CConfiguration cConf) {
-    try {
-      String confKey = String.format(Constants.Metrics.SYNC_WRITE_WITH_POLL_FREQ_WRITER, writer.getID());
-      return cConf.getBoolean(confKey);
-    } catch (NullPointerException e) {
-      // If writer specific configuration is not available, use default configuration
-      return cConf.getBoolean(Constants.Metrics.SYNC_WRITE_WITH_POLL_FREQ);
-    }
+    String confKey = String.format(Constants.Metrics.WRITER_SYNC_WRITE_WITH_POLL_FREQ, writer.getID());
+    return cConf.getBoolean(confKey, cConf.getBoolean(Constants.Metrics.SYNC_WRITE_WITH_POLL_FREQ));
   }
 
   @Override
@@ -316,10 +308,8 @@ public class MessagingMetricsProcessorService extends AbstractExecutionThreadSer
       //TODO - create a unique thread name
       super(String.format("ProcessMetricsThread-%s-%s", topic, processorName));
       setDaemon(true);
-      oldestTsMetricName = String.format("%s.topic.%s.oldest.delay.ms",
-                                         metricsPrefixForDelayMetrics, topic.getTopic());
-      latestTsMetricName = String.format("%s.topic.%s.latest.delay.ms",
-                                         metricsPrefixForDelayMetrics, topic.getTopic());
+      oldestTsMetricName = String.format("%s.topic.%s.oldest.delay.ms", metricsPrefixForDelayMetrics, topic.getTopic());
+      latestTsMetricName = String.format("%s.topic.%s.latest.delay.ms", metricsPrefixForDelayMetrics, topic.getTopic());
       this.metricsMetaKey = metricsMetaKey;
       this.topic = topic;
       this.payloadInput = new PayloadInputStream();

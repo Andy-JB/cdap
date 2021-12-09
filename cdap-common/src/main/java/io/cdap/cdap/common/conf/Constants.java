@@ -798,17 +798,17 @@ public final class Constants {
     /**
      * Writer specific use subscriber config
      */
-    public static final String USE_SUBSCRIBER_METADATA_KEY_WRITER = "metrics.use.subscriber.metadata.key.%s";
+    public static final String WRITER_USE_SUBSCRIBER_METADATA_KEY = "metrics.writer.%s.use.subscriber.metadata.key";
 
     /**
      * Writer specific sync write with poll freq config
      */
-    public static final String SYNC_WRITE_WITH_POLL_FREQ_WRITER = "metrics.sync.write.with.poll.freq.%s";
+    public static final String WRITER_SYNC_WRITE_WITH_POLL_FREQ = "metrics.writer.%s.sync.write.with.poll.freq";
 
     /**
      * Writer specific poll freq in seconds
      */
-    public static final String POLL_FREQUENCY_SECONDS_WRITER = "metrics.poll.frequency.seconds.%s";
+    public static final String WRITER_POLL_FREQUENCY_SECONDS = "metrics.writer.%s.poll.frequency.seconds";
 
     /**
      * Metric's dataset related constants.

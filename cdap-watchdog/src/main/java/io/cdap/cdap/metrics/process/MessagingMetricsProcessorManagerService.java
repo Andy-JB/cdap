@@ -145,13 +145,8 @@ public class MessagingMetricsProcessorManagerService extends AbstractIdleService
   }
 
   private boolean getUseSubscriberInKey(MetricsWriter writer, CConfiguration cConf) {
-    try {
-      String confKey = String.format(Constants.Metrics.USE_SUBSCRIBER_METADATA_KEY_WRITER, writer.getID());
-      return cConf.getBoolean(confKey);
-    } catch (NullPointerException e) {
-      // If writer specific configuration is not available, use default configuration
-      return cConf.getBoolean(Constants.Metrics.USE_SUBSCRIBER_METADATA_KEY);
-    }
+    String confKey = String.format(Constants.Metrics.WRITER_USE_SUBSCRIBER_METADATA_KEY, writer.getID());
+    return cConf.getBoolean(confKey, cConf.getBoolean(Constants.Metrics.USE_SUBSCRIBER_METADATA_KEY));
   }
 
   @Override
