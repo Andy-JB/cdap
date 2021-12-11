@@ -114,7 +114,6 @@ import io.cdap.cdap.internal.provision.ProvisionerModule;
 import io.cdap.cdap.internal.sysapp.SystemAppManagementService;
 import io.cdap.cdap.internal.tethering.TetheringClientHandler;
 import io.cdap.cdap.internal.tethering.TetheringHandler;
-import io.cdap.cdap.internal.tethering.TetheringModule;
 import io.cdap.cdap.internal.tethering.TetheringServerHandler;
 import io.cdap.cdap.metadata.LocalPreferencesFetcherInternal;
 import io.cdap.cdap.metadata.PreferencesFetcher;
@@ -260,7 +259,6 @@ public final class AppFabricServiceRuntimeModule extends RuntimeModule {
                            new ConfigStoreModule(),
                            new EntityVerifierModule(),
                            new ProvisionerModule(),
-                           new TetheringModule(),
                            BootstrapModules.getFileBasedModule(),
                            new AbstractModule() {
                              @Override

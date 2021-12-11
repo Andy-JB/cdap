@@ -16,13 +16,11 @@
 
 package io.cdap.cdap.internal.tethering;
 
-import com.google.common.io.Closeables;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import io.cdap.cdap.api.dataset.lib.CloseableIterator;
 import io.cdap.cdap.api.messaging.Message;
 import io.cdap.cdap.api.messaging.MessageFetcher;
-import io.cdap.cdap.api.messaging.MessagePublisher;
 import io.cdap.cdap.api.messaging.TopicAlreadyExistsException;
 import io.cdap.cdap.api.messaging.TopicNotFoundException;
 import io.cdap.cdap.common.BadRequestException;
@@ -36,34 +34,25 @@ import io.cdap.cdap.messaging.context.MultiThreadMessagingContext;
 import io.cdap.cdap.proto.id.NamespaceId;
 import io.cdap.cdap.proto.id.TopicId;
 import io.cdap.http.AbstractHttpHandler;
-import io.cdap.http.BodyProducer;
 import io.cdap.http.HandlerContext;
 import io.cdap.http.HttpResponder;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.QueryParam;
-import javax.ws.rs.core.HttpHeaders;
-import javax.ws.rs.core.MediaType;
 
 /**
  * {@link io.cdap.http.HttpHandler} to manage tethering server v3 REST APIs
@@ -134,31 +123,7 @@ public class TetheringServerHandler extends AbstractHttpHandler {
       commands.add(new TetheringControlMessage(TetheringControlMessage.Type.KEEPALIVE));
     }
     TetheringControlResponse tetheringControlResponse = new TetheringControlResponse(lastMessageId, commands);
-    final InputStream in = new ByteArrayInputStream(GSON.toJson(tetheringControlResponse).getBytes());
-    try {
-      responder.sendContent(HttpResponseStatus.OK, new BodyProducer() {
-
-        @Override
-        public ByteBuf nextChunk() throws Exception {
-          ByteBuf buffer = Unpooled.buffer(MAX_CHUNK_SIZE);
-          buffer.writeBytes(in, MAX_CHUNK_SIZE);
-          return buffer;
-        }
-
-        @Override
-        public void finished() {
-          Closeables.closeQuietly(in);
-        }
-
-        @Override
-        public void handleError(@Nullable Throwable cause) {
-          Closeables.closeQuietly(in);
-        }
-      }, new DefaultHttpHeaders().add(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_OCTET_STREAM));
-    } catch (Exception e) {
-      Closeables.closeQuietly(in);
-      throw e;
-    }
+    responder.sendJson(HttpResponseStatus.OK, GSON.toJson(tetheringControlResponse));
   }
 
   /**
@@ -183,20 +148,16 @@ public class TetheringServerHandler extends AbstractHttpHandler {
       throw e;
     }
 
-    try {
-      store.getPeer(tetherRequest.getPeer());
-      // Peer is already configured, treat this as a no-op.
-      responder.sendStatus(HttpResponseStatus.OK);
-      return;
-    } catch (PeerNotFoundException ignored) {
-    }
-
     // We don't need to keep track of the client metadata on the server side.
     PeerMetadata peerMetadata = new PeerMetadata(tetherRequest.getNamespaceAllocations(), Collections.emptyMap());
     // We don't store the peer endpoint on the server side because the connection is initiated by the client.
     PeerInfo peerInfo = new PeerInfo(tetherRequest.getPeer(), null, TetheringStatus.PENDING, peerMetadata);
     try {
       store.addPeer(peerInfo);
+    } catch (PeerAlreadyExistsException pae) {
+      // Peer is already configured, treat this as a no-op.
+      responder.sendStatus(HttpResponseStatus.OK);
+      return;
     } catch (Exception e) {
       try {
         messagingService.deleteTopic(topicId);
@@ -247,19 +208,5 @@ public class TetheringServerHandler extends AbstractHttpHandler {
                newStatus, peerInfo.getTetheringStatus());
     }
     responder.sendStatus(HttpResponseStatus.OK);
-  }
-
-  // Currently unused.
-  // TODO: Send RUN_PIPELINE message to peer.
-  private void publishMessage(TopicId topicId, @Nullable TetheringControlMessage message)
-    throws IOException, TopicNotFoundException {
-    MessagePublisher publisher = messagingContext.getMessagePublisher();
-    try {
-      publisher.publish(topicId.getNamespace(), topicId.getTopic(), StandardCharsets.UTF_8,
-                        GSON.toJson(message));
-    } catch (IOException | TopicNotFoundException e) {
-      LOG.error("Failed to publish to topic {}", topicId, e);
-      throw e;
-    }
   }
 }

@@ -102,8 +102,6 @@ public class TetheringHandler extends AbstractHttpHandler {
   @Path("/tethering/connections/{peer}")
   public void deleteTether(HttpRequest request, HttpResponder responder, @PathParam("peer") String peer)
     throws PeerNotFoundException, IOException {
-    // getPeer() throws PeerNotFoundException if peer is not present
-    store.getPeer(peer);
     store.deletePeer(peer);
     // Remove per-peer tethering topic if we're running on the server
     if (cConf.getBoolean(Constants.Tethering.TETHERING_SERVER_ENABLED)) {

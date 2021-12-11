@@ -22,8 +22,6 @@ import io.cdap.http.AbstractHttpHandler;
 import io.cdap.http.HttpResponder;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -36,7 +34,6 @@ import javax.ws.rs.Path;
  */
 @Path(Constants.Gateway.API_VERSION_3)
 public class TetheringClientHandler extends AbstractHttpHandler {
-  private static final Logger LOG = LoggerFactory.getLogger(TetheringClientHandler.class);
   private static final Gson GSON = new Gson();
   static final String CREATE_TETHER = "/v3/tethering/connect";
 
@@ -55,17 +52,6 @@ public class TetheringClientHandler extends AbstractHttpHandler {
   public void createTethering(FullHttpRequest request, HttpResponder responder) throws Exception {
     String content = request.content().toString(StandardCharsets.UTF_8);
     TetheringCreationRequest tetheringCreationRequest = GSON.fromJson(content, TetheringCreationRequest.class);
-
-    PeerInfo peer = null;
-    try {
-      peer = store.getPeer(tetheringCreationRequest.getPeer());
-    } catch (PeerNotFoundException e) {
-      // Do nothing, expected if peer is not already configured.
-    }
-    if (peer != null) {
-      throw new PeerAlreadyExistsException(peer.getName(), peer.getTetheringStatus());
-    }
-
     List<NamespaceAllocation> namespaces = tetheringCreationRequest.getNamespaceAllocations();
     PeerMetadata peerMetadata = new PeerMetadata(namespaces, tetheringCreationRequest.getMetadata());
     PeerInfo peerInfo = new PeerInfo(tetheringCreationRequest.getPeer(), tetheringCreationRequest.getEndpoint(),

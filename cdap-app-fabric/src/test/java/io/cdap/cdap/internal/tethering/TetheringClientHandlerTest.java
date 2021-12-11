@@ -167,7 +167,8 @@ public class TetheringClientHandlerTest {
   }
 
   @Test
-  public void testResendTetheringRequests() throws InterruptedException, IOException {
+  public void testResendTetheringRequests()
+    throws InterruptedException, IOException, PeerNotFoundException, PeerAlreadyExistsException {
     Map<String, String> metadata = ImmutableMap.of("project", PROJECT,
                                                    "location", LOCATION);
     PeerMetadata peerMetadata = new PeerMetadata(NAMESPACES, metadata);
