@@ -21,6 +21,7 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableSet;
 import io.cdap.cdap.k8s.discovery.KubeDiscoveryService;
 import io.cdap.cdap.k8s.runtime.KubeTwillRunnerService;
+import io.cdap.cdap.k8s.spi.environment.KubeEnvironmentInitializer;
 import io.cdap.cdap.master.spi.environment.MasterEnvironment;
 import io.cdap.cdap.master.spi.environment.MasterEnvironmentContext;
 import io.cdap.cdap.master.spi.environment.MasterEnvironmentRunnable;
@@ -133,6 +134,7 @@ public class KubeMasterEnvironment implements MasterEnvironment {
   private static final String NAMESPACE_CREATION_ENABLED = "master.environment.k8s.namespace.creation.enabled";
   private static final String CDAP_NAMESPACE_LABEL = "cdap.namespace";
   private static final String RESOURCE_QUOTA_NAME = "cdap-resource-quota";
+  private static final String INITIALIZER_EXTENSION_DIR = "master.environment.k8s.initializer.extension.dir";
 
   private static final String DEFAULT_NAMESPACE = "default";
   private static final String DEFAULT_INSTANCE_LABEL = "cdap.instance";
@@ -158,6 +160,7 @@ public class KubeMasterEnvironment implements MasterEnvironment {
   private String configMapName;
   private CoreV1Api coreV1Api;
   private boolean namespaceCreationEnabled;
+  private KubeEnvironmentInitializerProvider kubeEnvironmentInitializerProvider;
 
   @Override
   public void initialize(MasterEnvironmentContext context) throws IOException, ApiException {
@@ -169,6 +172,12 @@ public class KubeMasterEnvironment implements MasterEnvironment {
     podNameFile = new File(podInfoDir, conf.getOrDefault(POD_NAME_FILE, DEFAULT_POD_NAME_FILE));
     podUidFile = new File(podInfoDir, conf.getOrDefault(POD_UID_FILE, DEFAULT_POD_UID_FILE));
     namespaceCreationEnabled = Boolean.parseBoolean(conf.get(NAMESPACE_CREATION_ENABLED));
+    String k8sExtInitDir = conf.get(INITIALIZER_EXTENSION_DIR);
+    if (k8sExtInitDir == null) {
+      kubeEnvironmentInitializerProvider = new NoOpKubeEnvironmentInitializerProvider();
+    } else {
+      kubeEnvironmentInitializerProvider = new KubeEnvironmentInitializerExtensionLoader(k8sExtInitDir);
+    }
 
     // We don't support scaling from inside pod. Scaling should be done via CDAP operator.
     // Currently we don't support more than one instance per system service, hence set it to "1".
@@ -225,6 +234,12 @@ public class KubeMasterEnvironment implements MasterEnvironment {
                                              Collections.singletonMap(instanceLabel, instanceName),
                                              Integer.parseInt(conf.getOrDefault(JOB_CLEANUP_INTERVAL, "60")),
                                              Integer.parseInt(conf.getOrDefault(JOB_CLEANUP_BATCH_SIZE, "1000")));
+    // Load Kubernetes environment initializer extensions
+    Map<String, KubeEnvironmentInitializer> kubeEnvironmentInitializers = kubeEnvironmentInitializerProvider
+      .loadKubeEnvironmentInitializers();
+    for (String initializerName: kubeEnvironmentInitializers.keySet()) {
+      LOG.info("Loaded Kubernetes environment initializer {}", initializerName);
+    }
     LOG.info("Kubernetes environment initialized with pod labels {}", podLabels);
   }
 
@@ -308,6 +323,13 @@ public class KubeMasterEnvironment implements MasterEnvironment {
     }
     findOrCreateKubeNamespace(namespace, cdapNamespace);
     updateOrCreateResourceQuota(namespace, cdapNamespace, properties);
+
+    // Run Kubernetes environment initializers on namespace creation
+    for (Map.Entry<String, KubeEnvironmentInitializer> k8sInitializer: kubeEnvironmentInitializerProvider
+      .loadKubeEnvironmentInitializers().entrySet()) {
+      LOG.info("Running Kubernetes environment initializer {} for namespace creation", k8sInitializer.getKey());
+      k8sInitializer.getValue().postNamespaceCreation(namespace, properties);
+    }
   }
 
   @Override
