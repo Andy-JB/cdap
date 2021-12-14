@@ -188,7 +188,14 @@ public class MessagingMetricsProcessorService extends AbstractExecutionThreadSer
   @Override
   protected void run() {
     LOG.info("Start running MessagingMetricsProcessorService for {}", metricsWriter.getID());
-    metadataHandler.initCache(metricsTopics, getMetaTable());
+
+    MetricsConsumerMetaTable metaTable = getMetaTable();
+    if (metaTable == null) {
+      LOG.info("Could not get MetricsConsumerMetaTable, seems like we are being shut down");
+      return;
+    }
+
+    metadataHandler.initCache(metricsTopics, metaTable);
     Map<TopicId, MetricsMetaKey> keys = metricsMetaKeyProvider.getKeys(metricsTopics);
     for (Map.Entry<TopicId, MetricsMetaKey> keyEntry : keys.entrySet()) {
       ProcessMetricsThread metricsThread = new ProcessMetricsThread(keyEntry.getKey(), keyEntry.getValue(),
