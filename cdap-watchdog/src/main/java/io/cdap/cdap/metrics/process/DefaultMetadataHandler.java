@@ -72,6 +72,8 @@ public class DefaultMetadataHandler implements MetadataHandler {
 
   @Override
   public void saveCache(Map<MetricsMetaKey, TopicProcessMeta> topicProcessMetaMap) {
+    // topicProcessMetaMap can be empty if the current thread fetches nothing
+    // while other threads keep fetching new metrics and haven't updated messageId's of the corresponding topics
     if (topicProcessMetaMap.isEmpty()) {
       return;
     }
