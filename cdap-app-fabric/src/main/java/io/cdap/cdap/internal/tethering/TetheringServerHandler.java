@@ -100,7 +100,7 @@ public class TetheringServerHandler extends AbstractHttpHandler {
       throw new ForbiddenException(String.format("Peer %s is not authorized", peer));
     }
 
-    List<TetheringControlMessage> commands = new ArrayList<>();
+    List<TetheringControlResponse> controlResponses = new ArrayList<>();
     MessageFetcher fetcher = messagingContext.getMessageFetcher();
     TopicId topic = new TopicId(NamespaceId.SYSTEM.getNamespace(), topicPrefix + peer);
     String lastMessageId = messageId;
@@ -110,8 +110,8 @@ public class TetheringServerHandler extends AbstractHttpHandler {
         Message message = iterator.next();
         TetheringControlMessage controlMessage = GSON.fromJson(message.getPayloadAsString(StandardCharsets.UTF_8),
                                                                TetheringControlMessage.class);
-        commands.add(controlMessage);
         lastMessageId = message.getId();
+        controlResponses.add(new TetheringControlResponse(lastMessageId, controlMessage));
       }
     } catch (TopicNotFoundException e) {
       LOG.warn("Received control connection from peer {} that's not tethered", peer);
@@ -119,11 +119,13 @@ public class TetheringServerHandler extends AbstractHttpHandler {
       throw new BadRequestException(String.format("Invalid message id %s", messageId));
     }
 
-    if (commands.isEmpty()) {
-      commands.add(new TetheringControlMessage(TetheringControlMessage.Type.KEEPALIVE));
+    if (controlResponses.isEmpty()) {
+      controlResponses.add(new TetheringControlResponse(
+        lastMessageId, new TetheringControlMessage(TetheringControlMessage.Type.KEEPALIVE)));
     }
-    TetheringControlResponse tetheringControlResponse = new TetheringControlResponse(lastMessageId, commands);
-    responder.sendJson(HttpResponseStatus.OK, GSON.toJson(tetheringControlResponse));
+    responder.sendJson(HttpResponseStatus.OK,
+                       GSON.toJson(controlResponses.toArray(new TetheringControlResponse[0]),
+                                   TetheringControlResponse[].class));
   }
 
   /**

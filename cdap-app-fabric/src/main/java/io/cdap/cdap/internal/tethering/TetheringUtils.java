@@ -31,7 +31,7 @@ import javax.annotation.Nullable;
 /**
  * Utility functions for tethering.
  */
-public class TetheringUtils {
+public final class TetheringUtils {
   // Connection timeout = 5 seconds.
   private static final int TIMEOUT_MS = 5000;
 

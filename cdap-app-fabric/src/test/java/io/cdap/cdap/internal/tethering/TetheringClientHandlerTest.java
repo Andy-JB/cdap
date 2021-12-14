@@ -370,7 +370,7 @@ public class TetheringClientHandlerTest {
                                                                       .toString(),
                                                                           NAMESPACES,
                                                                           metadata);
-    HttpRequest request = HttpRequest.builder(HttpMethod.POST, clientConfig.resolveURL("tethering/create"))
+    HttpRequest request = HttpRequest.builder(HttpMethod.PUT, clientConfig.resolveURL("tethering/create"))
       .withBody(GSON.toJson(tetheringRequest))
       .build();
     HttpResponse response = HttpRequests.execute(request);

@@ -16,7 +16,6 @@
 
 package io.cdap.cdap.internal.tethering;
 
-import java.util.List;
 import javax.annotation.Nullable;
 
 /**
@@ -25,20 +24,20 @@ import javax.annotation.Nullable;
 public class TetheringControlResponse {
   // id of the last control message sent by the server.
   @Nullable
-  private String lastMessageId;
-  // control messages send by server.
-  private List<TetheringControlMessage> controlMessages;
+  private final String lastMessageId;
+  // control message sent by server.
+  private final TetheringControlMessage controlMessage;
 
-  public TetheringControlResponse(@Nullable String lastMessageId, List<TetheringControlMessage> controlMessages) {
+  public TetheringControlResponse(@Nullable String lastMessageId, TetheringControlMessage controlMessage) {
     this.lastMessageId = lastMessageId;
-    this.controlMessages = controlMessages;
+    this.controlMessage = controlMessage;
   }
 
   public String getLastMessageId() {
     return lastMessageId;
   }
 
-  public List<TetheringControlMessage> getControlMessages() {
-    return controlMessages;
+  public TetheringControlMessage getControlMessage() {
+    return controlMessage;
   }
 }

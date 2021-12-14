@@ -26,7 +26,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import javax.inject.Inject;
-import javax.ws.rs.POST;
+import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 
 /**
@@ -47,7 +47,7 @@ public class TetheringClientHandler extends AbstractHttpHandler {
   /**
    * Initiates tethering with the server.
    */
-  @POST
+  @PUT
   @Path("/tethering/create")
   public void createTethering(FullHttpRequest request, HttpResponder responder) throws Exception {
     String content = request.content().toString(StandardCharsets.UTF_8);
