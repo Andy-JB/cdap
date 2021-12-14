@@ -197,8 +197,8 @@ public class TetheringAgentService extends AbstractRetryableScheduledService {
 
   private void processTetherControlResponse(String message, PeerInfo peerInfo) {
     TetheringControlResponse[] responses = GSON.fromJson(message, TetheringControlResponse[].class);
-    for (int i = 0; i < responses.length; i++) {
-      TetheringControlMessage controlMessage = responses[i].getControlMessage();
+    for (TetheringControlResponse response : responses) {
+      TetheringControlMessage controlMessage = response.getControlMessage();
       switch (controlMessage.getType()) {
         case KEEPALIVE:
           LOG.trace("Got keepalive from {}", peerInfo.getName());
