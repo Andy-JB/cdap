@@ -16,11 +16,12 @@
 
 package io.cdap.cdap.internal.tethering.runtime.spi.provisioner;
 
-import com.google.inject.Inject;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
 import io.cdap.cdap.common.conf.CConfiguration;
 import io.cdap.cdap.internal.tethering.runtime.spi.runtimejob.TetheringRuntimeJobManager;
 import io.cdap.cdap.messaging.MessagingService;
-import io.cdap.cdap.messaging.context.MultiThreadMessagingContext;
+import io.cdap.cdap.messaging.guice.MessagingClientModule;
 import io.cdap.cdap.runtime.spi.provisioner.Capabilities;
 import io.cdap.cdap.runtime.spi.provisioner.Cluster;
 import io.cdap.cdap.runtime.spi.provisioner.ClusterStatus;
@@ -44,15 +45,6 @@ public class TetheringProvisioner implements Provisioner {
   private static final ProvisionerSpecification SPEC = new ProvisionerSpecification(
     "tether", "Tethering Provisioner",
     "Runs programs on an existing tethered CDAP instance. Does not provision any resources.");
-
-  private final CConfiguration cConf;
-  private final MultiThreadMessagingContext messagingContext;
-
-  @Inject
-  TetheringProvisioner(CConfiguration cConf, MessagingService messagingService) {
-    this.cConf = cConf;
-    this.messagingContext = new MultiThreadMessagingContext(messagingService);
-  }
 
   @Override
   public ProvisionerSpecification getSpec() {
@@ -104,6 +96,8 @@ public class TetheringProvisioner implements Provisioner {
   @Override
   public Optional<RuntimeJobManager> getRuntimeJobManager(ProvisionerContext context) {
     TetheringConf conf = TetheringConf.fromProperties(context.getProperties());
-    return Optional.of(new TetheringRuntimeJobManager(conf, cConf, messagingContext.getMessagePublisher()));
+    CConfiguration cConf = CConfiguration.create();
+    Injector injector = Guice.createInjector(new MessagingClientModule());
+    return Optional.of(new TetheringRuntimeJobManager(conf, cConf, injector.getInstance(MessagingService.class)));
   }
 }

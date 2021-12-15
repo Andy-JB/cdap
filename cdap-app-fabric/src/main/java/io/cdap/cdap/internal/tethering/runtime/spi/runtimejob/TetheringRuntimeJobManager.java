@@ -16,6 +16,7 @@
 
 package io.cdap.cdap.internal.tethering.runtime.spi.runtimejob;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import io.cdap.cdap.api.common.Bytes;
@@ -26,6 +27,8 @@ import io.cdap.cdap.common.conf.Constants;
 import io.cdap.cdap.internal.tethering.TetheringControlMessage;
 import io.cdap.cdap.internal.tethering.runtime.spi.provisioner.TetheringConf;
 import io.cdap.cdap.internal.tethering.runtime.spi.provisioner.TetheringProvisioner;
+import io.cdap.cdap.messaging.MessagingService;
+import io.cdap.cdap.messaging.context.MultiThreadMessagingContext;
 import io.cdap.cdap.proto.id.NamespaceId;
 import io.cdap.cdap.proto.id.TopicId;
 import io.cdap.cdap.runtime.spi.ProgramRunInfo;
@@ -38,6 +41,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -57,11 +61,11 @@ public class TetheringRuntimeJobManager implements RuntimeJobManager {
   private final CConfiguration cConf;
   private final MessagePublisher messagePublisher;
 
-  public TetheringRuntimeJobManager(TetheringConf conf, CConfiguration cConf, MessagePublisher messagePublisher) {
+  public TetheringRuntimeJobManager(TetheringConf conf, CConfiguration cConf, MessagingService messagingService) {
     this.tetheredInstanceName = conf.getTetheredInstanceName();
     this.tetheredNamespace = conf.getTetheredNamespace();
     this.cConf = cConf;
-    this.messagePublisher = messagePublisher;
+    this.messagePublisher = new MultiThreadMessagingContext(messagingService).getMessagePublisher();
   }
 
   @Override
@@ -69,21 +73,21 @@ public class TetheringRuntimeJobManager implements RuntimeJobManager {
     ProgramRunInfo runInfo = runtimeJobInfo.getProgramRunInfo();
     LOG.debug("Launching run {} with following configurations: tethered instance name {}, tethered namespace {}.",
               runInfo.getRun(), tetheredInstanceName, tetheredNamespace);
-    byte[] payload = Bytes.toBytes(GSON.toJson(createPayload())); // TODO: finalize run payload
+    byte[] payload = Bytes.toBytes(GSON.toJson(createPayload()));
     TetheringControlMessage message = new TetheringControlMessage(TetheringControlMessage.Type.RUN_PIPELINE, payload);
     publishToControlChannel(message);
   }
 
-  // TODO: get job details from tethered instance
   @Override
-  public Optional<RuntimeJobDetail> getDetail(ProgramRunInfo programRunInfo) throws Exception {
-    return Optional.empty();
+  public Optional<RuntimeJobDetail> getDetail(ProgramRunInfo programRunInfo) {
+    // TODO: pull job status instead of always treating it as RUNNING
+    return Optional.of(new RuntimeJobDetail(programRunInfo, RuntimeJobStatus.RUNNING));
   }
 
-  // TODO: get job details for all running jobs in tethered instance
   @Override
   public List<RuntimeJobDetail> list() throws Exception {
-    return null;
+    // TODO: pull list of all running jobs in tethered instance. This method is unused
+    return new ArrayList<>();
   }
 
   @Override
@@ -98,7 +102,7 @@ public class TetheringRuntimeJobManager implements RuntimeJobManager {
     }
     LOG.debug("Stopping run {} with following configurations: tethered instance name {}, tethered namespace {}.",
               programRunInfo.getRun(), tetheredInstanceName, tetheredNamespace);
-    byte[] payload = Bytes.toBytes(GSON.toJson(programRunInfo)); // TODO: finalize stop payload
+    byte[] payload = Bytes.toBytes(GSON.toJson(programRunInfo));
     TetheringControlMessage message = new TetheringControlMessage(TetheringControlMessage.Type.STOP_PIPELINE, payload);
     publishToControlChannel(message);
   }
@@ -118,7 +122,8 @@ public class TetheringRuntimeJobManager implements RuntimeJobManager {
     return null;
   }
 
-  private void publishToControlChannel(TetheringControlMessage message) throws IOException {
+  @VisibleForTesting
+  void publishToControlChannel(TetheringControlMessage message) throws IOException {
     TopicId topicId = new TopicId(NamespaceId.SYSTEM.getNamespace(),
                                   cConf.get(Constants.Tethering.TOPIC_PREFIX) + tetheredInstanceName);
     try {
