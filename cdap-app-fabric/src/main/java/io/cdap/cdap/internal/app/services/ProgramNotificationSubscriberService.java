@@ -261,6 +261,7 @@ public class ProgramNotificationSubscriberService extends AbstractNotificationSu
     String twillRunId = notification.getProperties().get(ProgramOptionConstants.TWILL_RUN_ID);
 
     RunRecordDetail recordedRunRecord;
+    LOG.error(">>> processing " + programRunStatus.toString() + " for " + programRunId);
     switch (programRunStatus) {
       case STARTING:
         String systemArgumentsString = properties.get(ProgramOptionConstants.SYSTEM_OVERRIDES);
@@ -268,22 +269,66 @@ public class ProgramNotificationSubscriberService extends AbstractNotificationSu
           Collections.emptyMap() : GSON.fromJson(systemArgumentsString, STRING_STRING_MAP);
         boolean isInWorkflow = systemArguments.containsKey(ProgramOptionConstants.WORKFLOW_NAME);
         boolean skipProvisioning = Boolean.parseBoolean(systemArguments.get(ProgramOptionConstants.SKIP_PROVISIONING));
+
+        ProgramOptions programOptions = ProgramOptions.fromNotification(notification, GSON);
+        ProgramDescriptor programDescriptor =
+          GSON.fromJson(properties.get(ProgramOptionConstants.PROGRAM_DESCRIPTOR), ProgramDescriptor.class);
+
         // if this is a preview run or a program within a workflow, we don't actually need to provision a cluster
         // instead, we skip forward past the provisioning and provisioned states and go straight to starting.
         if (isInWorkflow || skipProvisioning) {
-          ProgramOptions programOptions = ProgramOptions.fromNotification(notification, GSON);
-          ProgramDescriptor programDescriptor =
-            GSON.fromJson(properties.get(ProgramOptionConstants.PROGRAM_DESCRIPTOR), ProgramDescriptor.class);
+
           appMetadataStore.recordProgramProvisioning(programRunId, programOptions.getUserArguments().asMap(),
                                                      programOptions.getArguments().asMap(), messageIdBytes,
                                                      programDescriptor.getArtifactId().toApiArtifactId());
           appMetadataStore.recordProgramProvisioned(programRunId, 0, messageIdBytes);
+          recordedRunRecord = appMetadataStore.recordProgramStart(programRunId, twillRunId,
+                                                                  systemArguments, messageIdBytes);
+          writeToHeartBeatTable(recordedRunRecord,
+                                RunIds.getTime(programRunId.getRun(), TimeUnit.SECONDS),
+                                programHeartbeatTable);
+          return;
         }
+
+        for (Map.Entry<String, String> e : programOptions.getArguments().asMap().entrySet()) {
+          LOG.error(">>>>> newProgramOptions in STARTING getArguments was: " + e.getKey() + " : " + e.getValue());
+        }
+        for (Map.Entry<String, String> e : programOptions.getUserArguments().asMap().entrySet()) {
+          LOG.error(">>>>> newProgramOptions in STARTING getUserArguments was: " + e.getKey() + " : " + e.getValue());
+        }
+
+        String userId = properties.get(ProgramOptionConstants.USER_ID);
+//        Map<String, String> systemArgs = new HashMap<>(programOptions.getArguments().asMap());
+//        systemArgs.put(ProgramOptionConstants.USER_ID, properties.get(ProgramOptionConstants.USER_ID));
+//        systemArgs.put(ProgramOptionConstants.CLUSTER, properties.get(ProgramOptionConstants.CLUSTER));
+//        systemArgs.put(ProgramOptionConstants.SECURE_KEYS_DIR, properties.get(ProgramOptionConstants.SECURE_KEYS_DIR))
+//        ;
+//
+//        ProgramOptions newProgramOptions = new SimpleProgramOptions(programOptions.getProgramId(),
+//                                                                    new BasicArguments(systemArgs),
+//                                                                    programOptions.getUserArguments());
+
+        runnables.add(() -> {
+          String oldUser = SecurityRequestContext.getUserId();
+          try {
+            SecurityRequestContext.setUserId(userId);
+            try {
+              programLifecycleService.startInternal(programDescriptor, programOptions, programRunId);
+            } catch (Exception e) {
+              LOG.error("Failed to start program {}", programRunId, e);
+              programStateWriter.error(programRunId, e);
+            }
+          } finally {
+            SecurityRequestContext.setUserId(oldUser);
+          }
+        });
+
         recordedRunRecord = appMetadataStore.recordProgramStart(programRunId, twillRunId,
                                                                 systemArguments, messageIdBytes);
         writeToHeartBeatTable(recordedRunRecord,
                               RunIds.getTime(programRunId.getRun(), TimeUnit.SECONDS),
                               programHeartbeatTable);
+
         break;
       case RUNNING:
         long logicalStartTimeSecs = getTimeSeconds(notification.getProperties(),
@@ -321,12 +366,12 @@ public class ProgramNotificationSubscriberService extends AbstractNotificationSu
                                                     messageIdBytes, runnables);
         break;
       case REJECTED:
-        ProgramOptions programOptions = ProgramOptions.fromNotification(notification, GSON);
-        ProgramDescriptor programDescriptor =
+        ProgramOptions programOptions2 = ProgramOptions.fromNotification(notification, GSON);
+        ProgramDescriptor programDescriptor2 =
           GSON.fromJson(properties.get(ProgramOptionConstants.PROGRAM_DESCRIPTOR), ProgramDescriptor.class);
         recordedRunRecord = appMetadataStore.recordProgramRejected(
-          programRunId, programOptions.getUserArguments().asMap(),
-          programOptions.getArguments().asMap(), messageIdBytes, programDescriptor.getArtifactId().toApiArtifactId());
+          programRunId, programOptions2.getUserArguments().asMap(),
+          programOptions2.getArguments().asMap(), messageIdBytes, programDescriptor2.getArtifactId().toApiArtifactId());
         writeToHeartBeatTable(recordedRunRecord,
                               RunIds.getTime(programRunId.getRun(), TimeUnit.SECONDS),
                               programHeartbeatTable);
@@ -519,6 +564,7 @@ public class ProgramNotificationSubscriberService extends AbstractNotificationSu
     long endTs = getTimeSeconds(properties, ProgramOptionConstants.CLUSTER_END_TIME);
     ProgramDescriptor programDescriptor =
       GSON.fromJson(properties.get(ProgramOptionConstants.PROGRAM_DESCRIPTOR), ProgramDescriptor.class);
+    LOG.error(">>> processing " + clusterStatus.toString() + " for " + programRunId);
     switch (clusterStatus) {
       case PROVISIONING:
         appMetadataStore.recordProgramProvisioning(programRunId, programOptions.getUserArguments().asMap(),
@@ -541,6 +587,13 @@ public class ProgramNotificationSubscriberService extends AbstractNotificationSu
         ProgramOptions newProgramOptions = new SimpleProgramOptions(programOptions.getProgramId(),
                                                                     new BasicArguments(systemArgs),
                                                                     programOptions.getUserArguments());
+        LOG.error(">>> systemArgs:" + systemArgs.toString());
+        for (Map.Entry<String, String> e : newProgramOptions.getArguments().asMap().entrySet()) {
+          LOG.error(">>>>> newProgramOptions in PROVISIONED getArguments: " + e.getKey() + " : " + e.getValue());
+        }
+        for (Map.Entry<String, String> e : newProgramOptions.getUserArguments().asMap().entrySet()) {
+          LOG.error(">>>>> newProgramOptions in PROVISIONED getUserArguments: " + e.getKey() + " : " + e.getValue());
+        }
 
         // Publish the program STARTING state before starting the program
         programStateWriter.start(programRunId, newProgramOptions, null, programDescriptor);
@@ -554,20 +607,21 @@ public class ProgramNotificationSubscriberService extends AbstractNotificationSu
                                                              programOptions, provisioningTime));
 
         // start the program run
-        return Optional.of(() -> {
-          String oldUser = SecurityRequestContext.getUserId();
-          try {
-            SecurityRequestContext.setUserId(userId);
-            try {
-              programLifecycleService.startInternal(programDescriptor, newProgramOptions, programRunId);
-            } catch (Exception e) {
-              LOG.error("Failed to start program {}", programRunId, e);
-              programStateWriter.error(programRunId, e);
-            }
-          } finally {
-            SecurityRequestContext.setUserId(oldUser);
-          }
-        });
+//        return Optional.of(() -> {
+//          String oldUser = SecurityRequestContext.getUserId();
+//          try {
+//            SecurityRequestContext.setUserId(userId);
+//            try {
+//              programLifecycleService.startInternal(programDescriptor, newProgramOptions, programRunId);
+//            } catch (Exception e) {
+//              LOG.error("Failed to start program {}", programRunId, e);
+//              programStateWriter.error(programRunId, e);
+//            }
+//          } finally {
+//            SecurityRequestContext.setUserId(oldUser);
+//          }
+//        });
+        break;
       case DEPROVISIONING:
         RunRecordDetail recordedMeta = appMetadataStore.recordProgramDeprovisioning(programRunId, messageIdBytes);
         // If we skipped recording the run status, that means this was a duplicate message,
@@ -698,3 +752,4 @@ public class ProgramNotificationSubscriberService extends AbstractNotificationSu
     return AppMetadataStore.create(context);
   }
 }
+
