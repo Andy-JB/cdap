@@ -26,8 +26,6 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.Assert;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Collections;
-import java.util.List;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -53,10 +51,9 @@ public class MockTetheringServerHandler extends AbstractHttpHandler {
       responder.sendStatus(responseStatus);
       return;
     }
-    List<TetheringControlMessage> controlMessages = Collections.singletonList(
-      new TetheringControlMessage(TetheringControlMessage.Type.KEEPALIVE));
-    TetheringControlResponse response = new TetheringControlResponse(messageId, controlMessages);
-    responder.sendJson(responseStatus, GSON.toJson(response, TetheringControlResponse.class));
+    TetheringControlMessage keepalive = new TetheringControlMessage(TetheringControlMessage.Type.KEEPALIVE);
+    TetheringControlResponse[] responses =  { new TetheringControlResponse(messageId, keepalive) };
+    responder.sendJson(responseStatus, GSON.toJson(responses, TetheringControlResponse[].class));
   }
 
   @POST

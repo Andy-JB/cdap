@@ -180,11 +180,6 @@ public class TetheringAgentService extends AbstractRetryableScheduledService {
 
 
   private void handleForbidden(PeerInfo peerInfo) throws IOException {
-    if (peerInfo.getTetheringStatus() != TetheringStatus.PENDING) {
-      LOG.debug("Ignoring tethering rejection message from {}, current state: {}", peerInfo.getName(),
-                peerInfo.getTetheringStatus());
-      return;
-    }
     // Set tethering status to rejected.
     store.updatePeerStatusAndTimestamp(peerInfo.getName(), TetheringStatus.REJECTED);
   }
@@ -201,11 +196,12 @@ public class TetheringAgentService extends AbstractRetryableScheduledService {
   }
 
   private void processTetherControlResponse(String message, PeerInfo peerInfo) {
-    TetheringControlResponse tetheringControlResponse = GSON.fromJson(message, TetheringControlResponse.class);
-    for (TetheringControlMessage tetheringControlMessage : tetheringControlResponse.getControlMessages()) {
-      switch (tetheringControlMessage.getType()) {
+    TetheringControlResponse[] responses = GSON.fromJson(message, TetheringControlResponse[].class);
+    for (TetheringControlResponse response : responses) {
+      TetheringControlMessage controlMessage = response.getControlMessage();
+      switch (controlMessage.getType()) {
         case KEEPALIVE:
-          LOG.trace("Got keeplive from {}", peerInfo.getName());
+          LOG.trace("Got keepalive from {}", peerInfo.getName());
           break;
         case RUN_PIPELINE:
         case STOP_PIPELINE:
@@ -214,7 +210,9 @@ public class TetheringAgentService extends AbstractRetryableScheduledService {
       }
     }
 
-    String lastMessageId = tetheringControlResponse.getLastMessageId();
-    lastMessageIds.put(peerInfo.getName(), lastMessageId);
+    if (responses.length > 0) {
+      String lastMessageId = responses[responses.length - 1].getLastMessageId();
+      lastMessageIds.put(peerInfo.getName(), lastMessageId);
+    }
   }
 }

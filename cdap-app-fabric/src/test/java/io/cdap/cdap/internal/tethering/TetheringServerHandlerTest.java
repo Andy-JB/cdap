@@ -283,7 +283,7 @@ public class TetheringServerHandlerTest {
 
   private void createTethering(String peerName, List<NamespaceAllocation> namespaces) throws IOException {
     TetheringConnectionRequest tetheringRequest = new TetheringConnectionRequest(peerName, namespaces);
-    doHttpRequest(HttpMethod.POST, "tethering/connect", GSON.toJson(tetheringRequest));
+    doHttpRequest(HttpMethod.PUT, "tethering/connect", GSON.toJson(tetheringRequest));
   }
 
   private List<PeerState> getTetheringStatus() throws IOException {
